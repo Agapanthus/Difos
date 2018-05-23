@@ -2,97 +2,154 @@
 import * as CodeMirror from "codemirror";
 import * as util from "../util/util";
 import { CMEdit, InlineWidget, CMEditEx } from "./iwids";
+import { Stream } from "stream";
 
-///////// Prevent maleformed edits
+import * as CMH from "../../node_modules/codemirror/src/line/highlight.js";
 
-// Returns the valid position before
-const before = (a:CodeMirror.Position, doc: CodeMirror.Doc) => {
-    if(a.ch === 0) {
-        if(a.line === 0) return { ch: a.ch, line: a.line };
-        else {                
-            return { ch: doc.getLineHandle(a.line-1).text.length, line: a.line-1 };
-        }
-    } else {
-        return { ch: a.ch-1, line: a.line };
+// Calculates state based on the given state and code
+function hypotheticalState(cm: CMEditEx, lines: Array<string>, firstStart: number, firstLine: number, istate: any) {
+    const mode = cm.getDoc().getMode();
+    
+    // see codemirror/src/line/highlight.js
+    const context = {
+        state: mode.copyState(istate),
+        line: firstLine,
+        doc: cm.getDoc(),
+        maxLookAhead: 0,
+        baseTokens: null,
+        baseTokenPos: 1
+    };
+    for (var i = 0; i < lines.length; ++i) {
+        const line = lines[i];
+        CMH.processLine(cm, line, context, (i === 0) ? firstStart : 0);
     }
-};
+    return context.state;
+}
 
-// Returns the char before 
-const getCharBefore = (a: CodeMirror.Position, doc: CodeMirror.Doc) => {
-    if(a.ch === 0) {
-        if(a.line === 0) return "";
-        else {                
-            const l = doc.getLine(a.line - 1);
-            if(l.length <= 0) return "";
-            return l[l.length - 1];
-        }
-    } else {
-        const l = doc.getLine(a.line);
-        if(a.ch >= l.length) return "";
-        return l[a.ch];
-    }
-};
 
 const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirror.Position, origin: string, text: Array<string>, update: (from: CodeMirror.Position, to: CodeMirror.Position, text: Array<string>, origin:string) => void}) => {
-    //console.log(change);
+    console.log(change);
 
+    // TODO: Für Eingabe per Tastatur sollte eine Lösung analog zu http://codemirror.net/demo/closebrackets.html verwendet werden, um cursor und selection angemessen zu behandeln
+
+    const getSym = f => {switch(f) {
+        case "math": return "$$"; ;
+        case "imath": return "$"; 
+        case "isrc": return "`";
+        case "src": return "```"; 
+        case "bold": return "**"; 
+        case "italic": return "__";
+        case "capi": return "%%";
+        default: return "";
+    }};
+    const sensitiveSym = "$*`*_%"; // If a char is not one of these, it can safely be ignored when rendering formatting (except when used as separator)
     
-    if(change.text[0] == "") { // Something deleted
+    if(change.text.length == 1 && change.text[0] == "") { // Something deleted
         // Parse change + the last char before and the first after
         // if there is a paired symbol: Parse line
         // delete remove paired symbol symbol
     } else { // Something added
-        const c = change.text[0];
-        const l = cm.getDoc().getLine(change.from.line);
+   
+        // The idea:
+        // Calculate the state after the insertion before and after the insertion and add control-characters so that state won't change after the insertion
+        
 
-        const nbefore = (l: string, b: CodeMirror.Position, n: number, replacement: string) => (n === 0) ? replacement[0] : (b.ch >= n) ? l[b.ch-n] : "";
-        const nafter = (l: string, b: CodeMirror.Position, n: number,  replacement: string) => (n === 0) ? replacement[0] : (l.length > (b.ch+n-1)) ? l[b.ch+n-1] : "";
-        // Returns the number of n in {0..*} for which f was true
-        const countf = (f: (n: number)=>boolean) => {
-            let n = 0;
-            while(true) {
-                if(!f(n)) return n;
-                n++;
-            }
-        };
+        const doc = cm.getDoc();
 
-        if(c.length === 1) { // Only one char added 
-            let add = "";
-            let s0 = countf(n => nbefore(l,change.from,n,c) === '*'); 
-            if((s0 % 2) === 0 && s0 > 0) { 
-                add += "**";
-            } else {
-                s0 = countf(n => nafter(l,change.to,n,c) === '*'); 
-                console.log(s0);
-                if((s0 % 2) === 0 && s0 > 0) { 
-                    add += "**";
-                }
-            }
+        ///////// If there are control-characters after the insertion, we need to take care of them
+        let sensEnding = "";
+        const fl = doc.getLine(change.to.line);
+        for(let i=change.to.ch; i<fl.length; i++) {
+            if(sensitiveSym.indexOf(fl.charAt(i)) >= 0) {
+                sensEnding += fl.charAt(i);
+            } else break;
+        }
+        
+        // The part before the insertion
+        const firstpart = doc.getLine(change.from.line).substr(0,change.from.ch);
 
-            // TODO: Aber nicht in code oder math
-            
-            
-            if(add.length > 0) change.update(change.from, change.to, [change.text + add], change.origin);
+        // The changed part
+        const changedPlus = util.deepCopy(change.text);
+        changedPlus[0] = firstpart + changedPlus[0];
+        changedPlus[changedPlus.length - 1] += " " + sensEnding;
 
+        // The unchanged part
+        const beforePlus = [];
+        for(let n = change.from.line+1; n < change.to.line; n++) {
+            beforePlus.push(doc.getLine(n));
+        }
+        beforePlus.push(doc.getLine(change.to.line).substr(0, change.to.ch + sensEnding.length)); 
+        
+        // Calculate start before the first line
+        let firstState;
+        if(change.from.line === 0) {
+            firstState = cm.getDoc().getMode().startState();
         } else {
-
-            if(c[0] === '*') {
-
-            }
+            firstState = (cm as any).getStateAfter(change.from.line - 1, true);
         }
 
+        
+        //const beforeState = hypotheticalState(cm, [firstpart], 0, change.from.line, firstState);
+        //const beforeForm = beforeState.form as Array<string>;
+       
 
-        /*pairs.forEach(p => {
+        const afterForm = hypotheticalState(cm, beforePlus, 0, change.from.line, firstState).format as Array<string>;
+        const afterChangedForm = hypotheticalState(cm, changedPlus, 0, change.from.line, firstState).format as Array<string>;
+        
+               
+        console.log("\n////////////////////////////");
+        console.log(firstState.format)
+        console.log(beforePlus);
+        console.log(afterForm);
+        console.log(changedPlus);    
+        console.log(afterChangedForm);
+        
+            
+        let adds = "";
+        // add formatting
+        for(const f of afterChangedForm) {
+            if(!util.hasElement(f, afterForm)) {
+                adds += getSym(f) + " ";
+            }
+        }
+        // remove formatting
+        for(const f of afterForm) {
+            if(!util.hasElement(f, afterChangedForm)) {
+                adds += getSym(f) + " ";
+            }
+        }
+        adds = adds.trim();
+        
 
+        // If there are control-chars at the end of the insertion, get them
+        let sensStart = "";
+        const lt = change.text[change.text.length - 1];
+        for(let i=lt.length-1; i >= 0; i--) {
+            if(sensitiveSym.indexOf(lt[i]) >= 0) {
+                sensStart = lt[i] + sensStart;
+            } else break;
+        }
 
+        // Remove some unneccessary whitespaces
+        console.log(adds);
+        adds = sensStart + " " + adds + " " + sensEnding;
+        console.log(adds);
+        let spl = adds.split(new RegExp(`[^${util.escapeRegExp(sensitiveSym)}]`));
+        adds = util.reduce(spl, (acc, val) => {
+            if(acc.length > 0 && val.length > 0 && acc[acc.length - 1] === val[0]) return acc + " " + val;
+            return acc + val;
+        });
+        adds = adds.substr(sensStart.length, adds.length  - sensStart.length - sensEnding.length);
 
-        });*/
+        console.log(adds);
 
-        //if(c[0] === '*') // *_%`$
-        // Parse change + the last char before and the first after the change
-        // add additional symbols to pair
-
-        // Enter formula if this is directly after $ or $$ or $$\n
+        // Update changes
+        const updated = util.deepCopy(change.text);
+        updated[updated.length-1] = updated[updated.length-1] + adds; 
+        console.log(updated);
+        if(adds.length > 0) {
+            change.update(change.from, change.to, updated, change.origin);
+        }
     }
     
 };

@@ -124,19 +124,48 @@ const updateW = function(cm: CMEditEx) {
     const g = cm.getGutterElement().getBoundingClientRect();
     const stop = cm.getScrollerElement().scrollTop;
 
-    console.log("update");
-
     cm.state.iwids.forEach((fw,i) => {
         //setTimeout(() => {
             // Update line number
-            $(".cm-wid"+i, cm.getWrapperElement()).attr('class').split(/\s+/).forEach(e => {
+            /*$(".cm-wid"+i, cm.getWrapperElement()).attr('class').split(/\s+/).forEach(e => {
                 if(util.startsWith(e, "cm-inlwid")) {
                     const values = e.substr("cm-inlwid".length).split("x");
                     if(values.length !== 3) console.error(values);
                     fw.line = parseInt(values[1]);
                     fw.ch = parseInt(values[2]);
                 } 
-            });
+            });*/
+
+            const token = cm.getTokenAt({ ch: fw.ch, line: fw.line }, false);
+            //console.log(token);
+            const typeinvalid = type => (type === null || !(util.hasElement("math", type.split(/\s+/)) || util.hasElement("imath", type.split(/\s+/))));
+            if(typeinvalid(token.type) || token.string !== fw.str) {
+                    
+                //if(token.string !== fw.str && !typeinvalid(token.type)) console.log(token.string  + " " + fw.str);
+
+                // This might be caused by insertion or deletion of lines
+               /* if(util.defined(cm.state.oldLength)) {
+                    const newLine = fw.line + (cm.getDoc().lineCount() - cm.state.oldLength);
+                    //console.log(newLine);
+                    const newToken = cm.getTokenAt({ ch: fw.ch, line: newLine }, false);
+                    
+                    const fwl = fw.line;
+                    $(".cm-wid"+i, cm.getWrapperElement()).attr('class').split(/\s+/).forEach(e => {
+                        if(util.startsWith(e, "cm-inlwid")) {
+                            const values = e.substr("cm-inlwid".length).split("x");
+                            if(values.length !== 3) console.error(values);
+                            fw.line = parseInt(values[1]);
+                            fw.ch = parseInt(values[2]);
+                        } 
+                    });
+                    console.log($(".cm-wid"+i, cm.getWrapperElement()).attr('class'));
+                    console.log(fwl + " " + fw.line + " " + newLine +  " " + newToken.type)
+                    //console.log(newToken);
+                } */
+                console.error("Error 9");
+            } else {
+                cm.state.oldLength = cm.getDoc().lineCount();
+            }
 
             const rect = cm.charCoords({ ch: fw.ch, line: fw.line }); // TODO: Bei enter oder backslash ist line nicht immer aktuell...
             if(fw.center) {

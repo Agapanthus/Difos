@@ -16,4 +16,10 @@ export interface CMEdit<State> extends CodeMirror.Editor {
     state: State
 }
 
-export type CMEditEx = CMEdit<{iwids: Array<InlineWidget>, navigateFormula: boolean, formula: boolean, autocomplete: boolean}>;
+export type CMEditEx = CMEdit<{
+    iwids: Array<InlineWidget>, 
+    navigateFormula: boolean, 
+    formula: boolean, 
+    autocomplete: boolean,
+    oldLength: number
+}>;

@@ -49,7 +49,6 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
 
 
         //////////////////////////////////////////////// Next
-
         
         ////////////// Headers
         if (stream.match(/###+\s+[^\s#]/, false) ) {
@@ -123,10 +122,27 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             }
             return "control";
         }
+            
+        if(stream.match("$")) {
+            const i = s.format.indexOf("imath");
+            if(i >= 0) {
+                s.format.splice(i,1);
+            } else {
+                s.format.push("imath");
+                return "control imath-open";
+
+            }
+            return "control";
+        } 
+
 
         ////////////// Andere
 
-        if(s.format.indexOf("math") < 0) {
+        
+       // console.log(stream.peek());
+      //  console.log(s.format);
+
+        if(s.format.indexOf("math") < 0 && s.format.indexOf("imath") < 0) {
 
 
             if(stream.sol()) { // Reset formating on linebreak
@@ -160,20 +176,6 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 }
                 return "control";
             }
-
-        
-            if(stream.match("$")) {
-                const i = s.format.indexOf("imath");
-                if(i >= 0) {
-                    s.format.splice(i,1);
-                } else {
-                    s.format.push("imath");
-                    return "control imath-open";
-
-                }
-                return "control";
-            } 
-
         }
         
         //stream.next();
@@ -183,10 +185,11 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
 
         if(s.format.indexOf("imath") >= 0 || s.format.indexOf("math") >= 0) {
         
+            if(!util.defined((stream as any).lineOracle)) console.error("Error 8");
             const line = (stream as any).lineOracle.line;
             const ch = stream.pos + 1;
 
-            if(!stream.match(/[^$]*/)) {
+            if(!stream.match(/[^$]+/)) {
                 stream.next();                
                 console.error("Error 1!");
             }

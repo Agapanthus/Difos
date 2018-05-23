@@ -126,6 +126,26 @@ export function endsWith(str: string, suffix: string): boolean {
     return matches[0] === suffix;
 }
 
-export function deepCopy(a: Object): Object {
-    return jQuery.extend(true, {}, a);
+export function deepCopy<T>(a: T): T {
+    return jQuery.extend(true, (a instanceof Array) ? [] : {}, a);
 }
+
+// https://stackoverflow.com/a/6969486/6144727
+export function escapeRegExp(str) {
+    return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+
+// like https://gist.github.com/alexhawkins/28aaf610a3e76d8b8264
+export function reduce<T, B>(array: Array<T>, callback: (acc: B, val: T, i?: number, arr?: Array<T>) => B, initialVal?: B): B {
+    let accumulator = (initialVal === undefined) ? undefined : initialVal;
+    const context = undefined;
+    for (var i = 0; i < array.length; i++) {
+        if (accumulator !== undefined)
+            accumulator = callback.call(context, accumulator, array[i], i, array);
+        else {
+            //if(typeof accumulator !== typeof array[i]) console.error("incompatible types: " + typeof accumulator + " " + typeof array[i]);
+            accumulator = array[i] as any;
+        }
+    }
+    return accumulator;
+};
