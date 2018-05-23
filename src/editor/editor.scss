@@ -1,0 +1,110 @@
+@import 'theme';
+@import '../util/util';
+
+
+.CodeMirror {
+  height: 700px;
+}
+
+@mixin hidetext() { // Verwende NIEMALS! display: none zum verstecken von spans!
+  color: transparent;
+  font-family: $f_code;
+  font-size: 10px;
+  letter-spacing: -5px; // Hide the text and set width=0
+}
+
+.cm-s-difos-default {
+
+  font-family: $f_text;
+  line-height: 1.5;
+  font-size: $fontsize;
+
+  // TODO: debug
+  .cm-control {
+    color: #faa;
+    //@include hidetext();
+  }
+
+  .cm-hide {
+    @include hidetext();
+  }
+
+  .mq-editable-field.mq-focused {
+    border: none;
+    box-shadow: none;
+    -webkit-box-shadow: none;
+  }
+
+
+  .cm-bold {
+    font-weight: bold;
+  }
+  .cm-italic {
+    font-style: italic;
+  }
+  .cm-capi {
+    font-variant:small-caps;
+  }
+  
+  .cm-imath {
+    @include hidetext();
+  }
+  .cm-math {
+    color: #bbb;
+    @include hidetext();
+  }
+  
+  .cm-isrc {
+    font-family: $f_code;
+  }
+
+  .cm-src {
+    font-family: $f_code;
+    color: #000;
+    background: #eee;
+    width: 100%;
+    margin: 0;
+  }
+
+  @mixin lineafter($margintop) {
+    &:after {
+      display: block;
+      position: absolute;
+      width: 100%;
+      left: 0;
+      content: ' ';
+      margin-top: $margintop + px;
+      margin-bottom: 10px;
+      height: 1px;
+      background: $c_struct;
+    }
+  }  
+
+  .cm-h1 { 
+    color: $c_text;
+    font-size: $fontsize * pow($fontratio,2);
+    font-weight: bold;
+    font-family: $f_h1;
+    line-height: 3.0; // TODO: Das muss besser gehen: Mehrzeilige Header sehen total komisch aus. Bitte zusammenziehen!
+    @include lineafter(-39);
+  }
+
+  .cm-h2 {
+    color: $c_text;
+    font-size: $fontsize * pow($fontratio,1);
+    font-weight: bold;
+    font-family: $f_h2;
+    line-height: 3.5;
+    @include lineafter(-28);
+  }
+
+  .cm-h3 {
+    color: $c_text;
+    font-size: $fontsize * pow($fontratio,0);
+    font-weight: bold;
+    line-height: 3.5;
+    font-display: $f_text;
+  }
+
+
+}
