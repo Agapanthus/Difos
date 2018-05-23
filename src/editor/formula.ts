@@ -14,7 +14,7 @@ const changeProc = (cm: CMEditEx, ch) => {
     cm.state.iwids.forEach(fw => fw.inuse = false);
 
 
-    if(cm.state.formula) $(".cm-imath, .cm-math", cm.getWrapperElement()).each((i, obj) => {
+    if(cm.state.formula) $(".cm-math", cm.getWrapperElement()).each((i, obj) => {
       
         const friendElem = $(obj);
         let inlwidid = -1;
@@ -28,7 +28,7 @@ const changeProc = (cm: CMEditEx, ch) => {
                 line = parseInt(values[1]);
                 ch = parseInt(values[2]);
             } 
-            if(e === "cm-math") {
+            if(e === "cm-math-center") {
                 center = true;
             }
         });
@@ -138,7 +138,7 @@ const updateW = function(cm: CMEditEx) {
 
             const token = cm.getTokenAt({ ch: fw.ch, line: fw.line }, false);
             //console.log(token);
-            const typeinvalid = type => (type === null || !(util.hasElement("math", type.split(/\s+/)) || util.hasElement("imath", type.split(/\s+/))));
+            const typeinvalid = type => (type === null || !util.hasElement("math", type.split(/\s+/)));
             if(typeinvalid(token.type) || token.string !== fw.str) {
                     
                 //if(token.string !== fw.str && !typeinvalid(token.type)) console.log(token.string  + " " + fw.str);

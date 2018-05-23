@@ -45,12 +45,18 @@
   .cm-capi {
     font-variant:small-caps;
   }
-  
-  .cm-imath {
-    @include hidetext();
+
+  .cm-math-end-center {
+    float: right;
   }
+
+  .cm-math-center {
+    padding-right: 0;
+  }
+
+
+  
   .cm-math {
-    color: #bbb;
     @include hidetext();
   }
   

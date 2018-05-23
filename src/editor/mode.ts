@@ -18,7 +18,7 @@ import { Z_STREAM_END } from "zlib";
 
 
 
-const imathSizes: Array<string> = [];
+const mathSizes: Array<string> = [];
 
 CodeMirror.defineMode("difosMode", (config, modeConfig) => {
     return {
@@ -27,6 +27,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             header: 0,  // > 0 means this is a header-line
             format: [], // Formatings applied to this line
             inlineWidgetCount: 0,
+            mathLine: false,
         };
     },
     copyState: (s) => {
@@ -110,27 +111,20 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         }
 
         //////////// math
-
-        if(stream.match("$$")) {
+            
+        const linestart = stream.sol();
+        if(stream.match("$")) {
             const i = s.format.indexOf("math");
             if(i >= 0) {
                 s.format.splice(i,1);
-            } else {
-                //s.format.push("math");
-                s.format = ["math"]; // quasi linebreak - löscht Formatierung
+                if(s.mathLine) {
+                    s.mathLine = false;
+                    return "control math-end-center";
+                }
+            } else {                
+                s.mathLine = linestart;
+                s.format.push("math");
                 return "control math-open";
-            }
-            return "control";
-        }
-            
-        if(stream.match("$")) {
-            const i = s.format.indexOf("imath");
-            if(i >= 0) {
-                s.format.splice(i,1);
-            } else {
-                s.format.push("imath");
-                return "control imath-open";
-
             }
             return "control";
         } 
@@ -138,11 +132,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
 
         ////////////// Andere
 
-        
-       // console.log(stream.peek());
-      //  console.log(s.format);
-
-        if(s.format.indexOf("math") < 0 && s.format.indexOf("imath") < 0) {
+        if(s.format.indexOf("math") < 0) {
 
 
             if(stream.sol()) { // Reset formating on linebreak
@@ -183,7 +173,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         let adds = " ";
         
 
-        if(s.format.indexOf("imath") >= 0 || s.format.indexOf("math") >= 0) {
+        if(s.format.indexOf("math") >= 0) {
         
             if(!util.defined((stream as any).lineOracle)) console.error("Error 8");
             const line = (stream as any).lineOracle.line;
@@ -197,8 +187,8 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             const x = mathSplit(stream.current());
             if(x[0] >= 0 && x[1] >= 0) {
                 const xstr = x[0]+"x"+x[1];
-                if(imathSizes.indexOf(xstr) < 0) {
-                    imathSizes.push(xstr);
+                if(mathSizes.indexOf(xstr) < 0) {
+                    mathSizes.push(xstr);
                     util.createCSSSelector(".cm-span"+xstr, "padding-right:"+x[0]+"px;line-height:"+x[1]+"px");
                 }
                 adds += "span"+xstr;
@@ -207,15 +197,21 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             adds += " inlwid" + s.inlineWidgetCount + "x" + line + "x" + ch + " wid" + s.inlineWidgetCount;
             s.inlineWidgetCount++;
 
+            // Centered if it is the only thing in this line:
+            if(s.mathLine) {
+                if(stream.match(/\$$/,false)) {
+                    adds += " math-center";
+                } else {
+                    s.mathLine = false;
+                }
+            }
+
         }
         else {
             if(!stream.match(/[^*$_%#`]+/)) {
                 stream.next();
                 //console.error("Error 2!");
-            }
-
-
-            //while(stream.match(/[^*$_%#`]/));        
+            }  
         }
         
         if(s.format.length > 0) {

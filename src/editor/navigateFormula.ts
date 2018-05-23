@@ -18,7 +18,7 @@ const sani_cursor = (cm: CMEditEx) => {
 
 
         // An opening math-Element: Move the cursor to the beginning of the formula
-        if(util.hasElement("math-open", classes) || util.hasElement("imath-open", classes)) {
+        if(util.hasElement("math-open", classes)) {
             const t1 = cm.getTokenAt({ch: c.ch+1, line: c.line});
             if(t1.type != null && t1.end > c.ch) {
                 classes = t1.type.split(/\s+/);
@@ -31,7 +31,7 @@ const sani_cursor = (cm: CMEditEx) => {
         }
 
         // An math-Element: Move the cursor to the end of the formula
-        if(util.hasElement("math", classes) || util.hasElement("imath", classes)) {
+        if(util.hasElement("math", classes)) {
             let inlwidid = -1;
             classes.forEach(e => {
                 if(util.startsWith(e, "inlwid")) {

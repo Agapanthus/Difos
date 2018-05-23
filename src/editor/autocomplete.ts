@@ -28,13 +28,12 @@ function hypotheticalState(cm: CMEditEx, lines: Array<string>, firstStart: numbe
 
 
 const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirror.Position, origin: string, text: Array<string>, update: (from: CodeMirror.Position, to: CodeMirror.Position, text: Array<string>, origin:string) => void}) => {
-    console.log(change);
+    //console.log(change);
 
     // TODO: Für Eingabe per Tastatur sollte eine Lösung analog zu http://codemirror.net/demo/closebrackets.html verwendet werden, um cursor und selection angemessen zu behandeln
 
     const getSym = f => {switch(f) {
-        case "math": return "$$"; ;
-        case "imath": return "$"; 
+        case "math": return "$"; 
         case "isrc": return "`";
         case "src": return "```"; 
         case "bold": return "**"; 
@@ -96,14 +95,14 @@ const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirr
         const afterForm = hypotheticalState(cm, beforePlus, 0, change.from.line, firstState).format as Array<string>;
         const afterChangedForm = hypotheticalState(cm, changedPlus, 0, change.from.line, firstState).format as Array<string>;
         
-               
+         /*      
         console.log("\n////////////////////////////");
         console.log(firstState.format)
         console.log(beforePlus);
         console.log(afterForm);
         console.log(changedPlus);    
         console.log(afterChangedForm);
-        
+        */
             
         let adds = "";
         // add formatting
@@ -131,9 +130,7 @@ const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirr
         }
 
         // Remove some unneccessary whitespaces
-        console.log(adds);
         adds = sensStart + " " + adds + " " + sensEnding;
-        console.log(adds);
         let spl = adds.split(new RegExp(`[^${util.escapeRegExp(sensitiveSym)}]`));
         adds = util.reduce(spl, (acc, val) => {
             if(acc.length > 0 && val.length > 0 && acc[acc.length - 1] === val[0]) return acc + " " + val;
@@ -141,12 +138,10 @@ const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirr
         });
         adds = adds.substr(sensStart.length, adds.length  - sensStart.length - sensEnding.length);
 
-        console.log(adds);
 
         // Update changes
         const updated = util.deepCopy(change.text);
         updated[updated.length-1] = updated[updated.length-1] + adds; 
-        console.log(updated);
         if(adds.length > 0) {
             change.update(change.from, change.to, updated, change.origin);
         }

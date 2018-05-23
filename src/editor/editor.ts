@@ -25,7 +25,7 @@ Folgendes wird mit Steuercodes und als Kontext-menü implementiert, siehe zum Ve
 - **bold**, Strg+b
 - %%Kapitälchen%%, Strg+e
 - #Überschriften bzw ## ### ####, Strg+1,2,3,4,5
-- $Formeln$ bzw $$ $$, Strg+m, Strg+shift+m
+- $Formeln$, Strg+m, oder in neuer Zeile und so abgesetzt: Strg+shift+m
 - [Links](Url)
 
 Und weitere Features:
@@ -160,9 +160,9 @@ Mehrfache Leerzeilen- und Zeichen  werden   im Allgemeinen ignoriert.
 
 ## Subsections 
 gibt es auch!
-Und Formeln wie $\\sum_{x=0}^{\\infty}\\pi$ oder $x=0$ oder sogar $$
-\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}
-$$ gibt es au$\\chi$!
+Und Formeln wie $\\sum_{x=0}^{\\infty}\\pi$ oder $x=0$ oder sogar 
+$\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}$
+gibt es au$\\chi$!
 Und natürlich \`Quellcode\` mit allen Schikanen! 
 \`\`\`pseudocode
 a <- b
