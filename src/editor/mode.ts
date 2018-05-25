@@ -215,7 +215,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 listtype = "numd"; 
             } else if(stream.match(rxs.listtyperoman_p || (rxs.listtyperoman_p = new RegExp("\\s*" + util.regexRoman + "\\)($|\\s+)", 'i')),consume)) { // i) II) iii)
                 listtype = "romp"; 
-            } else if(stream.match(rxs.listtyperoman_d || (rxs.listtyperoman_d = new RegExp("\\s*" + util.regexRoman + "\\.($|\\s+)", 'i'),consume))) { // i. II. iii.
+            } else if(stream.match(rxs.listtyperoman_d || (rxs.listtyperoman_d = new RegExp("\\s*" + util.regexRoman + "\\.($|\\s+)", 'i')),consume)) { // i. II. iii.
                 listtype = "romd"; 
             } else if(stream.match(/\s*[\w\d]+\)($|\s+)/i,consume)) { // a) b) c) hallo) Aufgabe1)
                 listtype = "worp"; 
@@ -233,13 +233,13 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             s.listtype = getListtype(false);
                     
             let level = stream.indentation() - 1;
-                        
+
             if(stream.match(/\s+$/, false)) {  // Empty lines need additional indentation and end the list environment
                 level++;
                 endParagraph(s);
             }
             
-            if(level >= 0 && stream.match(/\s+/)) {    
+            if(level >= 0 && stream.match(/\s+/)) {
                 s.inlist = true;
                 s.progress = 1; 
                 return "list-space list-level" + level;
