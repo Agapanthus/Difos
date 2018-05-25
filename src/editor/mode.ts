@@ -10,10 +10,7 @@ import { Z_STREAM_END } from "zlib";
 
 // TODO: Wenn man die Seite im Hintergrund neulädt, ist CodeMirror nicht aktuell! z.B. sind die Auswahlzeilen teilweise falsch!
 // TODO: Wenn man vor Liste navigiert, Cursor so navigieren, dass er nicht in der Spaces-sektion ist, sondern danach
-// TODO: ordered-list-items irgendwie rechtsbündig anzeigen...?
-// TODO: List-env's hervorheben...?
 // TODO: Fold!
-// TODO: Regexe efficienter gestalten!
 
 /*
 There are different categories of things to detect.
@@ -56,6 +53,8 @@ There are different categories of things to detect.
 */
 
 const mathSizes: Array<string> = [];
+
+let rxs: any = {}; // Regexp-Cache
 
 CodeMirror.defineMode("difosMode", (config, modeConfig) => {
     return {
@@ -116,7 +115,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 s.progress = 1;
                 endParagraph(s);
                 return "control src-open";                
-            } else if(stream.match(new RegExp(`\\!\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)\\s*$`, 'i'), false)) {  
+            } else if(stream.match(rxs.imgwidget || (rxs.imgwidget = new RegExp(`\\!\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)\\s*$`, 'i')), false)) {  
                 s.widget = true; 
                 s.media = true;
                 s.progress = 1;
@@ -163,7 +162,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 switch(s.progress - 1) {
                     case 1: stream.match(/[^\]]*/i); return "media-title";
                     case 2: stream.match(/]\s*\(\s*/i); return "control";
-                    case 3: stream.match(new RegExp(util.regexUrl, 'i')); return "control url";
+                    case 3: stream.match((rxs.url || (rxs.url = new RegExp(util.regexUrl, 'i')))); return "control url";
                     case 4: stream.match(/\s*\)\s*$/i); s.progress = 0; s.widget = false; s.media = false; return "control";
                 }
             }
@@ -214,9 +213,9 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 listtype = "nump"; 
             } else if(stream.match(/\s*\d+\.($|\s+)/i,consume)) { // 1. 2. 3.
                 listtype = "numd"; 
-            } else if(stream.match(new RegExp("\\s*" + util.regexRoman + "\\)($|\\s+)", 'i'),consume)) { // i) II) iii)
+            } else if(stream.match(rxs.listtyperoman_p || (rxs.listtyperoman_p = new RegExp("\\s*" + util.regexRoman + "\\)($|\\s+)", 'i')),consume)) { // i) II) iii)
                 listtype = "romp"; 
-            } else if(stream.match(new RegExp("\\s*" + util.regexRoman + "\\.($|\\s+)", 'i'),consume)) { // i. II. iii.
+            } else if(stream.match(rxs.listtyperoman_d || (rxs.listtyperoman_d = new RegExp("\\s*" + util.regexRoman + "\\.($|\\s+)", 'i'),consume))) { // i. II. iii.
                 listtype = "romd"; 
             } else if(stream.match(/\s*[\w\d]+\)($|\s+)/i,consume)) { // a) b) c) hallo) Aufgabe1)
                 listtype = "worp"; 
@@ -278,7 +277,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
 
         const pairMatcher = (s, prop, stream, symb) => {
             const e = util.escapeRegExp(symb);
-            if(!s[prop] && stream.match(new RegExp(e+"(([^"+e+"\\s.,;:\!\?\`\'\"].*[^"+e+"\\s.,;:\!\?\`\'\"])|[^"+e+"\\s.,;:\!\?\`\'\"])?"+e), false)) {
+            if(!s[prop] && stream.match(rxs["pairMatcher_"+e] || (rxs["pairMatcher_"+e] = new RegExp(e+"(([^"+e+"\\s.,;:\!\?\`\'\"].*[^"+e+"\\s.,;:\!\?\`\'\"])|[^"+e+"\\s.,;:\!\?\`\'\"])?"+e)), false)) {
                 s[prop] = true;
                 stream.match(symb);
                 return true;
@@ -322,18 +321,18 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             switch(s.progress - 1) {
                 case 1: stream.match(/[^\]]*/i); if(s.link) return "link-text"; else return "media-title";
                 case 2: stream.match(/]\s*\(\s*/i); return "control";
-                case 3: stream.match(new RegExp(util.regexUrl, 'i')); return "control url";
+                case 3: stream.match(rxs.url || (rxs.url = new RegExp(util.regexUrl, 'i'))); return "control url";
                 case 4: stream.match(/\s*\)/i); s.progress = 0; s.link = false; s.media = false; return "control";
             }
         }
 
-        if(stream.match(new RegExp(`\\!\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)`, 'i'), false)) {  
+        if(stream.match(rxs.media || (rxs.media = new RegExp(`\\!\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)`, 'i')), false)) {  
             s.media = true;
             s.progress = 1;
             stream.match(/\!\[/i);
             return "control " + adds;
         }
-        if(stream.match(new RegExp(`\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)*`, 'i'), false)) {  
+        if(stream.match(rxs.link || (rxs.link = new RegExp(`\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)*`, 'i')), false)) {  
             s.link = true;
             s.progress = 1;
             stream.match(/\[/i);

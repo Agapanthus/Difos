@@ -105,8 +105,7 @@ a) alles was nicht eingerückt ist, kann keine Liste sein.
    dolor sit amet 
 
    Quartzum kulmur
-
-  iv) Weiter
+  iv) Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce sodales scelerisque erat vel rhoncus. Duis vehicula ante quam, nec euismod leo aliquam ut. 
   i. immer
   ii. weiter
    * weiter
@@ -197,3 +196,31 @@ CodeMirror.defineOption("WYSIWYG", false, function(cm: CMEditEx, val) {
         cm.refresh();
     }
 });
+
+// See http://codemirror.net/demo/indentwrap.html
+function indentWrap(cm, line, elt) {
+    const charWidth = cm.defaultCharWidth();
+    const basePadding = 2;
+    
+    // TODO: Really need to check this?
+    if(cm.getOption("tabSize") !== 1) console.error("Assuming tab == 1");
+    
+    const white = line.text.search(/\S|$/);
+    const spacesw = white; // + line.text.substr(0, white).split(/\t/).length * (cm.getOption("tabSize") - 1);
+    const _off = 40 * spacesw;
+    elt.style.textIndent = "-" + _off + "px";
+    elt.style.paddingLeft = (basePadding + _off) + "px";
+}
+
+CodeMirror.defineOption("indentWrap", true, function(cm: CMEditEx, val) {
+    if (val) {
+        cm.state.indentWrap = true;
+        cm.on("renderLine", indentWrap);
+        cm.refresh();
+    } else {
+        cm.state.indentWrap = false;
+        cm.off("renderLine", indentWrap);
+        cm.refresh();
+    }
+});
+

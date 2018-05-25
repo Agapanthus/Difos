@@ -21,5 +21,6 @@ export type CMEditEx = CMEdit<{
     navigateFormula: boolean, 
     formula: boolean, 
     autocomplete: boolean,
-    oldLength: number
+    oldLength: number,
+    indentWrap: boolean,
 }>;
