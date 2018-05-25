@@ -27,7 +27,7 @@ There are different categories of things to detect.
     structures the document as "title", "part", "paragraph"
     initiated by multiple #s followed by space
     the number of #s determines the text-size
-3) List items / Quotes
+3) Lists / Quotes
     like letter) number) romannumber) number. - * > or space, if the previous line is part of a list with equal or larger indentation
     lists and quotes are automatically continued but might be customized and changed ad libitum
     a lists level is determined by its indentation 
@@ -72,11 +72,8 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
 
             widget: false,
             
-            list: [], // { ind }
             inlist: false,
             listtype: "",
-            listenv: false,
-            listenvc: 0,
 
             progress: 0,
             media: false,
@@ -87,17 +84,13 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         return util.deepCopy(s);
     },
     blankLine: function (s) {
-        s.list = [];
-        s.listenv = false;
 
         return null;
     },
     token: function (stream, s) {
 
         const endParagraph = s => {
-            s.list = [];
-            s.listenv = false;
-            s.listtype = "";
+            
         }
         
         //////////////////////////////////////////////////
@@ -213,8 +206,6 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         // 3) List item / Quotes    
 
 
-        // TODO: list entfernen! Stattdessen einfach nur Leerzeichen zählen! Listen brauchen dann Leerzeichen. Damit wird Listenv obsolet!
-
         let adds = ""; // Will be added to the token in 4) and later
 
         const getListtype = (consume) => {            
@@ -240,60 +231,32 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         }
 
         if(stream.sol()) {
-            const listtype = getListtype(false);
-          
-            if(s.listenv || listtype.length > 0) { 
+            s.listtype = getListtype(false);
+                    
+            let level = stream.indentation() - 1;
+                        
+            if(stream.match(/\s+$/, false)) {  // Empty lines need additional indentation and end the list environment
+                level++;
+                endParagraph(s);
+            }
+            
+            if(level >= 0 && stream.match(/\s+/)) {    
                 s.inlist = true;
-                s.listtype = listtype; 
                 s.progress = 1; 
-                if(!s.listenv) s.listenvc++;
-                s.listenv = true;
-
-                  
-                if(listtype.length <= 0) { // Adjust level for lines without listitem
-                    while(s.list.length >= 0 && stream.indentation() < s.list[s.list.length - 1]) s.list.pop();
-                } 
-                         
-                const ind = stream.indentation();
-                let level = s.list.length - 1;
-                if(ind === 0) {
-                    s.list = [];
-                    level = 0;
-                } else {
-                    if(level < 0 || s.list[level] < ind) {
-                        s.list.push(ind);
-                        level = s.list.length;
-                    } else {
-                        while(level >= 0) {
-                            if(s.list[level] > ind) s.list.pop();
-                            else break;
-                            level--;     
-                        } 
-                        level++;              
-                    }
-                }     
-
-                
-                if(stream.match(/\s+$/, false)) {  // Empty lines need additional indentation and end the list environment
-                    level++;
-                    endParagraph(s);
-                }
-
-                if(stream.match(/\s+/)) {    
-                    return "list-space line-list-env"+s.listenvc+" list-level" + level;
-                } 
+                return "list-space list-level" + level;
             } 
         } 
+    
         if(s.inlist) {
             s.progress++;
             switch(s.progress - 1) {
                 case 1:
                     if(s.listtype.length <= 0) {
-                        adds += "list-extra-space0 line-list-env"+s.listenvc;
+                        adds += "list-extra-space0 "
                     } else {
                         if(!stream.match(/\S+\s*/)) console.error("Error 10");
                         const w = util.getTextWidth(stream.current(), "17px Droid Sans"); // TODO: Get this string from sass...?
-                        return "list line-list-env"+s.listenvc+" list-" + s.listtype + " list-extra-space"+w;
+                        return "list  list-" + s.listtype + " list-extra-space"+w;
                     }
                 case 2:
                     s.progress = 0;
@@ -308,14 +271,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         //////////////////////////////////////////////////
         // 4) Paragraphs
         
-        // unreachable
-        /*
-        if(stream.string.match(/^\s*$/)) { // quasi blank line
-            s.list = []; // End list environment
-            s.listenv = false;
-            console.log("end");
-        }
-        */
+        
 
         //////////////////////////////////////////////////
         // 5) Decoration
@@ -380,7 +336,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         if(stream.match(new RegExp(`\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)*`, 'i'), false)) {  
             s.link = true;
             s.progress = 1;
-            stream.match(/\!\[/i);
+            stream.match(/\[/i);
             return "control " + adds;
         }
 

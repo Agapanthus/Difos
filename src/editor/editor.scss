@@ -2,17 +2,24 @@
 @import '../util/util';
 
 
+//////////////////////////////////////////////////////////////////////////////
+/*********************[    Editor     ]**************************************/
+
 .CodeMirror {
   height: 100%;
 }
 
-@mixin hidetext() { // Verwende NIEMALS! display: none zum verstecken von spans!
+
+
+//////////////////////////////////////////////////////////////////////////////
+/*********************[    Macros     ]**************************************/
+
+@mixin hidetext() { // NEVER use display: none to hide a span!
   color: transparent;
   font-family: $f_code;
   font-size: 10px;
   letter-spacing: -5px; // Hide the text and set width=0
 }
-
 
 @mixin lineafter($margintop) {
   &:after {
@@ -26,7 +33,7 @@
     height: 1px;
     background: $c_struct;
   }
-}  
+}
 
 @mixin linebefore($margintop) {
   &:before {
@@ -40,208 +47,111 @@
     height: 1px;
     background: $c_struct;
   }
-}  
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/*********************[    General    ]**************************************/
 
 .cm-s-difos-default {
-
   font-family: $f_text;
   line-height: 1.7;
   font-size: $fontsize;
 
   .cm-control {
-    color: #faa;
+    color: $c_control;
   }
 
-
-    
-  &.math-visual .cm-math {
-    @include hidetext();
-  }
-  &:not(.math-visual) .cm-math {
-    padding-right: 0;
-    //line-height: inherit;
-    line-height: 2.5; 
-  }
-
-  &.WYSIWYG .cm-control {
+ &.WYSIWYG .cm-control {
     @include hidetext();
   }
 
 
-  .cm-list-space {
-    @include hidetext();
-  }
-  .cm-list-space-after {
-    padding-right: 0;
-  }
-
-  @for $i from 0 through 50 {
-    .cm-list-extra-space#{$i} {
-      padding-left: 50px - $i;
-    }
-  }
-
-  @for $i from 1 through 16 {
-    .cm-list-level#{$i} {
-      padding-left: $i * 50px;
-      &:before {
-        display: block;
-        position: absolute;
-        left: 0;
-        content: $i + ' ';
-        color: #faa;
-      }
-    }
-    &.WYSIWYG .cm-list-level#{$i} {
-      &:before {
-        display: none;
-      }
-    }
-  }
-
-
-  .cm-list-star {
-    color: transparent;
-    font-family: $f_code;
-    size: 13px;
-    &:before {
-      position: absolute;  
-      margin-left: 3px;
-      margin-top: 13px;
-      width: 4px;
-      height: 4px;
-      background: #000;
-      border-radius: 50%;
-      content: " ";
-    }
-  }
-  .cm-list-quot {
-    color: transparent;
-    font-family: $f_code;
-    size: 13px;
-    &:before {
-      position: absolute;  
-      margin-left: 2px;
-      margin-top: 0;
-      width: 3px;
-      height: 100%;
-      background: $c_struct;
-      content: " ";
-    }
-  }
-
-
-
-  .cm-url {
-    text-decoration: underline;
-    color: blue;
-  }
-
-  .cm-link-text {
-    text-decoration: underline;
-    color: blue;
-  }
-
-  .cm-reference {
-    text-decoration: underline;
-    color: blue;
-  }
-
-  .mq-editable-field.mq-focused {
-    border: none;
-    box-shadow: none;
-    -webkit-box-shadow: none;
-  }
-
-  .cm-bold {
-    font-weight: bold;
-  }
-  .cm-italic {
-    font-style: italic;
-  }
-  .cm-caps {
-    font-variant:small-caps;
-  }
-
-  .cm-strike {
-    text-decoration: line-through;
-  }
-
-  .cm-math {
-    color: #aaa;
-  }
-
-  .cm-imath {
-    color: #aaa;
-  }
   
-  .cm-isrc {
-    font-family: $f_code;
-    background: rgba(0,0,0,0.05);
-    border-radius: 5px;
-    border: 1px solid rgba(0,0,0,0.1);
-    padding: 3px;
-    line-height: 1.7;
-  }
+    
+//////////////////////////////////////////////////////////////////////////////
+/*********************[ 1a) Math      ]**************************************/
 
-  .cm-src {
-    font-family: $f_code;
-    color: #000;
-    //background: #eee;
-    width: 100%;
-    margin: 0;
-  }
+&.math-visual .cm-math {
+  @include hidetext();
+}
+&:not(.math-visual) .cm-math {
+  padding-right: 0;
+  //line-height: inherit;
+  line-height: 2.5; 
+}
 
-  .cm-src-title {
-    font-weight: bold;
-    @include linebefore(-28);
-  }
+.cm-math {
+  color: $c_math;
+}
 
-  .cm-src-language {
-    font-variant: small-caps;
-  }
+.cm-imath {
+  color: $c_math;
+}
 
-  .cm-src-open {
-    @include lineafter(0);
-  }
-  .cm-src-close {
-    @include lineafter(0);
-  }
 
-  .cm-qed-box {
-    float: right;
-    color: transparent;
-    font-family: $f_code;
-    font-size: 12px;
-    &:before {
-      display: inline-block;
-      position: absolute;
-      content: ' ';
-      width: 10px;
-      margin-top: 8px;
-      height: 10px;
-      border:  1px solid #000;
-    }
-  }
+//////////////////////////////////////////////////////////////////////////////
+/*********************[ 1b) Src       ]**************************************/
 
-  .cm-qed {
-    float: right;
-  }
+.cm-isrc {
+  font-family: $f_code;
+  background: rgba(0,0,0,0.05);
+  border-radius: 5px;
+  border: 1px solid rgba(0,0,0,0.1);
+  padding: 3px;
+  line-height: 1.7;
+}
 
-  .cm-nut {
-    @include hidetext();
-    padding-right: 10px;
-    padding-left: 10px;
-    &:before {
-      display: inline-block;
-      position: absolute;
-      content: '–';
-      color: #000;
-      margin-left: -4px;
-      font-family: $f_text;
-      font-size: $fontsize;
-    }
-  }
+.cm-src {
+  font-family: $f_code;
+  width: 100%;
+  margin: 0;
+}
+
+.cm-src-title {
+  font-weight: bold;
+  @include linebefore(-28);
+}
+
+.cm-src-language {
+  font-variant: small-caps;
+}
+
+.cm-src-open {
+  @include lineafter(0);
+}
+.cm-src-close {
+  @include lineafter(0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+/*********************[ 1c)   Media   ]**************************************/
+
+.cm-url {
+  text-decoration: underline;
+  color: $c_link;
+}
+
+.cm-link-text {
+  text-decoration: underline;
+  color: $c_link;
+}
+
+.cm-reference {
+  text-decoration: underline;
+  color: $c_link;
+}
+
+.mq-editable-field.mq-focused {
+  border: none;
+  box-shadow: none;
+  -webkit-box-shadow: none;
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+/*********************[ 2) Structure  ]**************************************/
 
   .cm-h1 { 
     color: $c_text;
@@ -269,5 +179,119 @@
     font-display: $f_text;
   }
 
+  
+//////////////////////////////////////////////////////////////////////////////
+/*********************[ 3) List       ]**************************************/
+ 
+  .cm-list-space {
+    @include hidetext();
+  }
+  .cm-list-space-after {
+    padding-right: 0;
+  }
+
+  @for $i from 0 through 50 {
+    .cm-list-extra-space#{$i} {
+      padding-left: $indent - $i;
+    }
+  }
+
+  @for $i from 1 through 16 {
+    .cm-list-level#{$i} {
+      padding-left: $i * $indent;
+    }
+  }
+
+  .cm-list-star {
+    color: transparent;
+    font-family: $f_code;
+    size: 13px;
+    &:before {
+      position: absolute;  
+      margin-left: 3px;
+      margin-top: 13px;
+      width: 4px;
+      height: 4px;
+      background: $c_text;
+      border-radius: 50%;
+      content: " ";
+    }
+  }
+  .cm-list-quot {
+    color: transparent;
+    font-family: $f_code;
+    size: 13px;
+    &:before {
+      position: absolute;  
+      margin-left: 2px;
+      margin-top: 0;
+      width: 3px;
+      height: 100%;
+      background: $c_struct;
+      content: " ";
+    }
+  }
+
+
+  
+//////////////////////////////////////////////////////////////////////////////
+/*********************[ 5) Decoration  ]**************************************/
+
+  .cm-bold {
+    font-weight: bold;
+  }
+  .cm-italic {
+    font-style: italic;
+  }
+  .cm-caps {
+    font-variant:small-caps;
+  }
+
+  .cm-strike {
+    text-decoration: line-through;
+  }
+  
+
+  
+//////////////////////////////////////////////////////////////////////////////
+/*********************[ 6) Other Objects ]***********************************/
+ 
+.cm-qed-box {
+  float: right;
+  color: transparent;
+  font-family: $f_code;
+  font-size: 12px;
+  &:before {
+    display: inline-block;
+    position: absolute;
+    content: ' ';
+    width: 10px;
+    margin-top: 8px;
+    height: 10px;
+    border:  1px solid $c_text;
+  }
+}
+
+.cm-qed {
+  float: right;
+}
+
+
+.cm-nut {
+  @include hidetext();
+  padding-right: 10px;
+  padding-left: 10px;
+  &:before {
+    display: inline-block;
+    position: absolute;
+    content: '–';
+    color: $c_text;
+    margin-left: -4px;
+    font-family: $f_text;
+    font-size: $fontsize;
+  }
+}
+
+  
 
 }

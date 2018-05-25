@@ -76,7 +76,7 @@ Das _Zeilenende_ können solche Zeichen _nicht überspannen.
 Wie_ man hier sieht.
 
 Mehrfache  Leerzeilen- und Zeichen   werden  im Allgemeinen ignoriert außer sie stehen am #Satzanfang.
-   Denn die braucht man für Listen. 
+ Denn die braucht man für Listen. 
 Siehe dazu Abschnitt 3. Was zu beweisen war. []
 [Links](https://en.wikipedia.org/wiki/Link) gibt es, eingebettete Bilder ![das ist keins](http://bild.de) vorerst nicht. Bilder kann man aber absetzen (wie auf Medium) indem man sie in eine ganz eigene Zeile schreibt -- das ist ohnehin cooler:
 ![Abgesetztes Panorama](https://upload.wikimedia.org/wikipedia/commons/5/57/Galunggung.jpg)
@@ -96,29 +96,30 @@ n \\\`choose\\\` k
 
 ### Listen
 
-1. Hallo
-2. und so
-    i) Weiter
-    ii) Lorem
-    iii) Ipsum
-    dolor sit amet
+a) alles was nicht eingerückt ist, kann keine Liste sein.
+ 1. Hallo
+ 2. und so
+  i) Weiter
+  ii) Lorem
+  iii) Ipsum
+   dolor sit amet 
 
-    Quartzum kulmur
-    
-    iv) Weiter
-        i. immer
-        ii. weiter
-            * weiter
-            * und weiter
-3. Jaja.
-a) und so
-    > Auch Zitate sind
-    > Listen
-    Wirklich!
-    > ...wahr!
-b) immer weiter, inkl _Formatierung_.
-c) immer immer weiter
+   Quartzum kulmur
 
+  iv) Weiter
+  i. immer
+  ii. weiter
+   * weiter
+   * und weiter
+ 3. Jaja.
+  a) und so
+   > Auch Zitate sind
+   > Listen
+   Wirklich!
+   > ...wahr!
+  b) immer weiter, inkl _Formatierung_.
+  c) immer immer weiter
+Nicht eingerückt und auch sofort Ende der Liste!
 
 `
 /*
