@@ -200,7 +200,7 @@ CodeMirror.defineOption("WYSIWYG", false, function(cm: CMEditEx, val) {
 // See http://codemirror.net/demo/indentwrap.html
 function indentWrap(cm, line, elt) {
     const charWidth = cm.defaultCharWidth();
-    const basePadding = 2;
+    const basePadding = 4;
     
     // TODO: Do I really need to check this?
     if(cm.getOption("tabSize") !== 1) console.error("Assuming tab == 1");

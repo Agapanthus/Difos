@@ -88,9 +88,6 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
     },
     token: function (stream, s) {
 
-        const endParagraph = s => {
-            
-        }
         
         //////////////////////////////////////////////////
         // 1) Widgets
@@ -101,26 +98,22 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 s.widget = true;
                 s.math = true;
                 s.progress = 1;
-                endParagraph(s);
                 return "control";               
             } else if(stream.match(/`\s*$/i)) {
                 s.widget = true;
                 s.src = true;
                 s.progress = 3;
-                endParagraph(s);
                 return "control src-open";                
             } else if(!stream.match(/`[^`\\]*(?:\\.[^`\\]*)*`\s*\S+/i, false) && stream.match(/`\s*/i)) { // If the closing ` is on the same line, there must follow only whitespace.
                 s.widget = true;
                 s.src = true;
                 s.progress = 1;
-                endParagraph(s);
                 return "control src-open";                
             } else if(stream.match(rxs.imgwidget || (rxs.imgwidget = new RegExp(`\\!\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)\\s*$`, 'i')), false)) {  
                 s.widget = true; 
                 s.media = true;
                 s.progress = 1;
                 stream.match(/\!\[/i);
-                endParagraph(s);
                 return "control";
             }
 
@@ -177,19 +170,16 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 s.header = 3;
                 stream.eatWhile("#");
                 stream.eatSpace();
-                endParagraph(s);
                 return "control";
             } else if (stream.match(/##\s+[^\s#]/, false) ) {
                 s.header = 2;
                 stream.eatWhile("#");
                 stream.eatSpace();
-                endParagraph(s);
                 return "control";
             } else if (stream.match(/#\s+[^\s#]/, false) ) {
                 s.header = 1;
                 stream.eatWhile("#");
                 stream.eatSpace();
-                endParagraph(s);
                 return "control";
             }
         } else if(s.header > 0) { // Continue header
@@ -233,15 +223,16 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             s.listtype = getListtype(false);
                     
             let level = stream.indentation() - 1;
-
+            let emptyLine = false;
             if(stream.match(/\s+$/, false)) {  // Empty lines need additional indentation and end the list environment
                 level++;
-                endParagraph(s);
+                emptyLine = true;
             }
-            
             if(level >= 0 && stream.match(/\s+/)) {
-                s.inlist = true;
-                s.progress = 1; 
+                if(!emptyLine) {
+                    s.inlist = true;
+                    s.progress = 1; 
+                }
                 return "list-space list-level" + level;
             } 
         } 
@@ -252,6 +243,9 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 case 1:
                     if(s.listtype.length <= 0) {
                         adds += "list-extra-space0 "
+                        s.progress = 0;
+                        s.inlist = false;
+                        s.listtype = "";
                     } else {
                         if(!stream.match(/\S+\s*/)) console.error("Error 10");
                         const w = util.getTextWidth(stream.current(), "17px Droid Sans"); // TODO: Get this string from sass...?
@@ -288,14 +282,14 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             return false;
         };
 
-        if(pairMatcher(s, "src", stream, "`")) return "control "+adds; // TODO: Escape \`
+        if(pairMatcher(s, "src", stream, "`")) return "control "+adds; // TODO: Escape \` and allow whitespace!
         if(s.src) { 
             if(s.src) adds += "isrc ";
             if(!stream.match(/[^\`]+/)) console.error("Error 11"); // TODO: Escape \`
             return adds;
         }
 
-        if(pairMatcher(s, "math", stream, "$")) return "control "+adds; // TODO: Escape \$
+        if(pairMatcher(s, "math", stream, "$")) return "control "+adds; // TODO: Escape \$ and allow whitespace!
         if(s.math) { 
             if(s.math) adds += "imath ";
             if(!stream.match(/[^\$]+/)) console.error("Error 12"); // TODO: Escape \$
