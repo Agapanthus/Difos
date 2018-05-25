@@ -6,8 +6,13 @@ import { CMEdit, InlineWidget, CMEditEx } from "./iwids";
 
 ////////// Go into formula
 
-const sani_cursor = (cm: CMEditEx) => {
-    if(!cm.state.navigateFormula) return;
+export const sani_cursor = (cm: CMEditEx) => {
+    if(!cm.state.formula) {
+        console.error("Strange!");
+        return;
+    }
+
+    // TODO: Im WYSIWYG-Modus beim Navigieren die Formatierungszeichen überspringen
 
     if(cm.hasFocus()) {
         const doc = cm.getDoc();
@@ -52,15 +57,3 @@ const sani_cursor = (cm: CMEditEx) => {
     }
 
 };
-
-
-
-CodeMirror.defineOption("navigateFormula", true, function(cm: CMEditEx, val) {
-    if (val) {
-        cm.state.navigateFormula = true;
-        cm.on("cursorActivity", sani_cursor);
-    } else {
-        cm.state.navigateFormula = null;
-        cm.off("cursorActivity", sani_cursor);
-    }
-});

@@ -1,4 +1,3 @@
-
 import * as CodeMirror from "codemirror";
 import * as util from "../util/util";
 import { CMEdit, InlineWidget, CMEditEx } from "./iwids";
@@ -31,6 +30,9 @@ const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirr
     //console.log(change);
 
     // TODO: Für Eingabe per Tastatur sollte eine Lösung analog zu http://codemirror.net/demo/closebrackets.html verwendet werden, um cursor und selection angemessen zu behandeln
+
+    // TODO: Wenn man Texte wie "$ **" vor "**" einfügt  wird fälschlicherweise das "**" rausgeführt, obwohl $ das schluckt. 
+
 
     const getSym = f => {switch(f) {
         case "math": return "$"; 
@@ -70,7 +72,7 @@ const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirr
         // The changed part
         const changedPlus = util.deepCopy(change.text);
         changedPlus[0] = firstpart + changedPlus[0];
-        changedPlus[changedPlus.length - 1] += " " + sensEnding;
+        changedPlus[changedPlus.length - 1] += " " + sensEnding; // TODO: Was tun mit sensEnding?
 
         // The unchanged part
         const beforePlus = [];
@@ -95,14 +97,14 @@ const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirr
         const afterForm = hypotheticalState(cm, beforePlus, 0, change.from.line, firstState).format as Array<string>;
         const afterChangedForm = hypotheticalState(cm, changedPlus, 0, change.from.line, firstState).format as Array<string>;
         
-         /*      
+           
         console.log("\n////////////////////////////");
         console.log(firstState.format)
         console.log(beforePlus);
         console.log(afterForm);
         console.log(changedPlus);    
         console.log(afterChangedForm);
-        */
+        
             
         let adds = "";
         // add formatting
@@ -151,7 +153,7 @@ const sani_cm = (cm: CMEditEx, change: { from: CodeMirror.Position, to: CodeMirr
 
 
 
-CodeMirror.defineOption("autocomplete", true, function(cm: CMEditEx, val) {
+CodeMirror.defineOption("autocomplete", false, function(cm: CMEditEx, val) {
     if(!util.defined(cm.state.iwids)) cm.state.iwids = [];
     if (val) {
         cm.state.autocomplete = true;

@@ -3,9 +3,11 @@ import * as CodeMirror from "codemirror";
 import * as util from "../util/util";
 import { CMEdit, InlineWidget, CMEditEx } from "./iwids";
 import { mathFormat, mathSplit, _math } from "../editor/math";
+import { sani_cursor } from "./navigateFormula";
 
 
 // TODO: Wenn man eine Formel vor den anderen erzeugt, gibt es schwere Probleme beim updaten! Wir brauchen ein besseres System um die char,line-Positionen zu kriegen, als den mode! Das würde auch das Problem der nicht aktuellen Zeilenzahlen lösen.
+// TODO: Wenn man eine noch leere Formel am Ende einer Zeile hat und davor umbricht, wird danach das Dokument zerstört!
 
 const changeProc = (cm: CMEditEx, ch) => {
 
@@ -112,7 +114,9 @@ const changeProc = (cm: CMEditEx, ch) => {
             if(util.defined(fw.obj.m)) {
                 fw.obj.m.revert();
             }
-            fw.obj.c.parentNode.removeChild(fw.obj.c);
+            if(util.defined(fw.obj.c.parentNode)) {
+                fw.obj.c.parentNode.removeChild(fw.obj.c);
+            } else console.error("Strange!");
         }
     });
     cm.state.iwids = util.filter(cm.state.iwids, fw => fw.inuse);
@@ -180,22 +184,28 @@ const updateW = function(cm: CMEditEx) {
     
 };
 
-CodeMirror.defineOption("formula", true, function(cm: CMEditEx, val) {
+CodeMirror.defineOption("formula", false, function(cm: CMEditEx, val) {
     if(!util.defined(cm.state.iwids)) cm.state.iwids = [];
     if (val) {
         cm.state.formula = true;
+        $(cm.getWrapperElement()).addClass("math-visual");
         cm.on("changes", changeProc);
         cm.on("update", updateW);
+        cm.on("cursorActivity", sani_cursor);
         setTimeout(function() {            
             changeProc(cm, undefined);
             updateW(cm);
+            cm.refresh();
         }.bind(cm), 0);
     } else {
         cm.state.formula = null;
+        $(cm.getWrapperElement()).removeClass("math-visual");
         cm.off("changes", changeProc);
-        cm.on("update", updateW);
+        cm.off("update", updateW);
+        cm.off("cursorActivity", sani_cursor);
         setTimeout(function() {            
             changeProc(cm, undefined); // Will delete everything
+            cm.refresh();
         }.bind(cm), 0); 
     }
 });

@@ -1,12 +1,3 @@
-// CodeMirror, copyright (c) by laobubu
-// Distributed under an MIT license: http://codemirror.net/LICENSE
-//
-// This is a patch to GFM mode. Supports:
-// 1. footnote: style "hmd-footnote"
-// 2. bare link: e.g. "please visit [page1] to continue", forwarding to footnote named as "page1"
-//
-
-
 import "codemirror/lib/codemirror";
 import * as util from "../util/util";
 
@@ -17,6 +8,52 @@ import * as CodeMirror from "codemirror";
 import { Z_STREAM_END } from "zlib";
 
 
+// TODO: Wenn man die Seite im Hintergrund neulädt, ist CodeMirror nicht aktuell! z.B. sind die Auswahlzeilen teilweise falsch!
+// TODO: Wenn man vor Liste navigiert, Cursor so navigieren, dass er nicht in der Spaces-sektion ist, sondern danach
+// TODO: ordered-list-items irgendwie rechtsbündig anzeigen...?
+// TODO: List-env's hervorheben...?
+// TODO: Fold!
+// TODO: Regexe efficienter gestalten!
+
+/*
+There are different categories of things to detect.
+
+1) Widgets
+    Text between $s or `s which starts at the very first char of a line and for itself contains line breaks or the line is empty after it
+    If there is content after a multilined widget, it is silently droped
+    ` is followed by the language and an optional title for the algorithm-box
+    ![title](url) is handled similar
+2) Structure
+    structures the document as "title", "part", "paragraph"
+    initiated by multiple #s followed by space
+    the number of #s determines the text-size
+3) List items / Quotes
+    like letter) number) romannumber) number. - * > or space, if the previous line is part of a list with equal or larger indentation
+    lists and quotes are automatically continued but might be customized and changed ad libitum
+    a lists level is determined by its indentation 
+    a level ends when there is a less indented line. A paragraph break will end the list environment.
+4) Paragraphs
+    single break: same paragraph
+    double break: next paragraph
+5) Decoration
+        * bold
+        _ italic
+        $ katex
+        ~ strike
+        % small caps
+        ` src
+    is always paired
+    NOT markdown
+    ignored, if followed by punctuation or space
+    every symbol toggles the mode, e.g. *a* = *a*** != **a** = a
+6) Objects
+    [], qed, QED... at the lineending will be aligned right
+    ![title](url) is an media object
+    [text](url) is a link
+    -- is a en-dash
+    #Name, @Name is a reference to the same page with this hash, e.g. #help has href="http://example.com/difos#help"
+
+*/
 
 const mathSizes: Array<string> = [];
 
@@ -25,202 +62,345 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
     startState: () => {
         return {
             header: 0,  // > 0 means this is a header-line
-            format: [], // Formatings applied to this line
-            inlineWidgetCount: 0,
-            mathLine: false,
+
+            bold: false,
+            italic: false,
+            math: false,
+            strike: false,
+            caps: false,
+            src: false,
+
+            widget: false,
+            
+            list: [], // { ind }
+            inlist: false,
+            listtype: "",
+            listenv: false,
+            listenvc: 0,
+
+            progress: 0,
+            media: false,
+            link: false,
         };
     },
     copyState: (s) => {
         return util.deepCopy(s);
     },
     blankLine: function (s) {
-        s.header = 0;
-        
-        return "hide";
+        s.list = [];
+        s.listenv = false;
+
+        return null;
     },
     token: function (stream, s) {
 
-        if(s.header > 0) {
+        const endParagraph = s => {
+            s.list = [];
+            s.listenv = false;
+            s.listtype = "";
+        }
+        
+        //////////////////////////////////////////////////
+        // 1) Widgets
+        
+        if(stream.sol() && !s.widget) { // Begin Widget
+            if(stream.match(/\$[^\$\\]*(?:\\.[^\$\\]*)*\$\s*$/i, false)) {
+                stream.match("$");
+                s.widget = true;
+                s.math = true;
+                s.progress = 1;
+                endParagraph(s);
+                return "control";               
+            } else if(stream.match(/`\s*$/i)) {
+                s.widget = true;
+                s.src = true;
+                s.progress = 3;
+                endParagraph(s);
+                return "control src-open";                
+            } else if(!stream.match(/`[^`\\]*(?:\\.[^`\\]*)*`\s*\S+/i, false) && stream.match(/`\s*/i)) { // If the closing ` is on the same line, there must follow only whitespace.
+                s.widget = true;
+                s.src = true;
+                s.progress = 1;
+                endParagraph(s);
+                return "control src-open";                
+            } else if(stream.match(new RegExp(`\\!\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)\\s*$`, 'i'), false)) {  
+                s.widget = true; 
+                s.media = true;
+                s.progress = 1;
+                stream.match(/\!\[/i);
+                endParagraph(s);
+                return "control";
+            }
+
+        } else if(s.widget) {
+            if(s.math) {
+                s.progress++;
+                switch(s.progress - 1) {
+                    case 1: stream.match(/[^\$\\]*(?:\\.[^\$\\]*)*/i); return "math";
+                    case 2: stream.match(/\$/i); s.progress = 0; s.widget = false; s.math = false; return "control";
+                }
+            } else if(s.src) {
+                s.progress++;
+                switch(s.progress - 1) {
+                    case 1: 
+                        if(stream.match(/\w+\s*$/i)) {
+                            s.progress++;
+                            return "control src-language";
+                        } else if(stream.match(/\w+\s*/i)) {
+                            return "control src-language";
+                        } else {
+                            console.error("Error 10");
+                        }
+                    case 2: stream.match(/[^`\\]*(?:\\.[^`\\]*)*/i); return "src-title";
+                    case 3: 
+                        if(stream.match(/`.*/i)) {
+                            s.progress = 0; 
+                            s.widget = false; 
+                            s.src = false; 
+                            return "control src-close";
+                        } else if(stream.match(/[^`\\]*(?:\\.[^`\\]*)*\\?/i)) {
+                            s.progress--;
+                            return "src";
+                        } else {
+                            console.error("Error 9");
+                        }
+                }
+            } else if(s.media) {
+                s.progress++;
+                switch(s.progress - 1) {
+                    case 1: stream.match(/[^\]]*/i); return "media-title";
+                    case 2: stream.match(/]\s*\(\s*/i); return "control";
+                    case 3: stream.match(new RegExp(util.regexUrl, 'i')); return "control url";
+                    case 4: stream.match(/\s*\)\s*$/i); s.progress = 0; s.widget = false; s.media = false; return "control";
+                }
+            }
+        }
+
+        
+        //////////////////////////////////////////////////
+        // 2) Structure       
+
+        if(stream.sol()) { // Begin header
+            if (stream.match(/###+\s+[^\s#]/, false) ) {
+                s.header = 3;
+                stream.eatWhile("#");
+                stream.eatSpace();
+                endParagraph(s);
+                return "control";
+            } else if (stream.match(/##\s+[^\s#]/, false) ) {
+                s.header = 2;
+                stream.eatWhile("#");
+                stream.eatSpace();
+                endParagraph(s);
+                return "control";
+            } else if (stream.match(/#\s+[^\s#]/, false) ) {
+                s.header = 1;
+                stream.eatWhile("#");
+                stream.eatSpace();
+                endParagraph(s);
+                return "control";
+            }
+        } else if(s.header > 0) { // Continue header
             let q = s.header;
             if(q > 3) q = 3; 
             s.header = 0;
             stream.skipToEnd();
             return "h"+q;
         }
-
-
-        //////////////////////////////////////////////// Next
         
-        ////////////// Headers
-        if (stream.match(/###+\s+[^\s#]/, false) ) {
-            s.header = 3;
-            stream.eatWhile("#");
-            stream.eatSpace();
-            return "control";
-        } else if (stream.match(/##\s+[^\s#]/, false) ) {
-            s.header = 2;
-            stream.eatWhile("#");
-            stream.eatSpace();
-            return "control";
-        } else if (stream.match(/#\s+[^\s#]/, false) ) {
-            s.header = 1;
-            stream.eatWhile("#");
-            stream.eatSpace();
-            return "control";
+        
+        //////////////////////////////////////////////////
+        // 3) List item / Quotes    
+
+
+        // TODO: list entfernen! Stattdessen einfach nur Leerzeichen zählen! Listen brauchen dann Leerzeichen. Damit wird Listenv obsolet!
+
+        let adds = ""; // Will be added to the token in 4) and later
+
+        const getListtype = (consume) => {            
+            let listtype = "";
+            if(stream.match(/\s*\d+\)($|\s+)/i,consume) ) { // 1) 2) 3)
+                listtype = "nump"; 
+            } else if(stream.match(/\s*\d+\.($|\s+)/i,consume)) { // 1. 2. 3.
+                listtype = "numd"; 
+            } else if(stream.match(new RegExp("\\s*" + util.regexRoman + "\\)($|\\s+)", 'i'),consume)) { // i) II) iii)
+                listtype = "romp"; 
+            } else if(stream.match(new RegExp("\\s*" + util.regexRoman + "\\.($|\\s+)", 'i'),consume)) { // i. II. iii.
+                listtype = "romd"; 
+            } else if(stream.match(/\s*[\w\d]+\)($|\s+)/i,consume)) { // a) b) c) hallo) Aufgabe1)
+                listtype = "worp"; 
+            } else if(stream.match(/\s*\>($|\s+)/i,consume)) { // quote
+                listtype = "quot"; 
+            } else if(stream.match(/\s*\*($|\s+)/i,consume)) { // *
+                listtype = "star"; 
+            } else if(stream.match(/\s*\-($|\s+)/i,consume)) { // -
+                listtype = "minu"; 
+            } 
+            return listtype;
         }
 
-        ///////////// src
+        if(stream.sol()) {
+            const listtype = getListtype(false);
+          
+            if(s.listenv || listtype.length > 0) { 
+                s.inlist = true;
+                s.listtype = listtype; 
+                s.progress = 1; 
+                if(!s.listenv) s.listenvc++;
+                s.listenv = true;
 
-        if(stream.match("```")) {
-            const i = s.format.indexOf("src");
-            if(i >= 0) {
-                s.format.splice(i,1);
-            } else {
-                //s.format.push("src");
-                s.format = ["src"]; // quasi linebreak - löscht Formatierung
-            }
-            return "control";
+                  
+                if(listtype.length <= 0) { // Adjust level for lines without listitem
+                    while(s.list.length >= 0 && stream.indentation() < s.list[s.list.length - 1]) s.list.pop();
+                } 
+                         
+                const ind = stream.indentation();
+                let level = s.list.length - 1;
+                if(ind === 0) {
+                    s.list = [];
+                    level = 0;
+                } else {
+                    if(level < 0 || s.list[level] < ind) {
+                        s.list.push(ind);
+                        level = s.list.length;
+                    } else {
+                        while(level >= 0) {
+                            if(s.list[level] > ind) s.list.pop();
+                            else break;
+                            level--;     
+                        } 
+                        level++;              
+                    }
+                }     
+
+                
+                if(stream.match(/\s+$/, false)) {  // Empty lines need additional indentation and end the list environment
+                    level++;
+                    endParagraph(s);
+                }
+
+                if(stream.match(/\s+/)) {    
+                    return "list-space line-list-env"+s.listenvc+" list-level" + level;
+                } 
+            } 
         } 
-        
-        if(s.format.indexOf("src") >= 0) {
-            stream.skipToEnd();
-            if(stream.current().length <= 0) {
-                console.error("Error 9")
-            } else {                
-                return "src";
-            }
-        }
-
-        
-        ///////////// isrc
-
-        if(stream.match("`")) {
-            const i = s.format.indexOf("isrc");
-            if(i >= 0) {
-                s.format.splice(i,1);
-            } else {
-                s.format.push("isrc");
-            }
-            return "control";
-        }
-    
-        if(s.format.indexOf("isrc") >= 0) {
-            if(stream.match(/[^`]+/)) {
-                return s.format.join(" ");
-            }
-        }
-
-        //////////// math
-            
-        const linestart = stream.sol();
-        if(stream.match("$")) {
-            const i = s.format.indexOf("math");
-            if(i >= 0) {
-                s.format.splice(i,1);
-                if(s.mathLine) {
-                    s.mathLine = false;
-                    return "control math-end-center";
-                }
-            } else {                
-                s.mathLine = linestart;
-                s.format.push("math");
-                return "control math-open";
-            }
-            return "control";
-        } 
-
-
-        ////////////// Andere
-
-        if(s.format.indexOf("math") < 0) {
-
-
-            if(stream.sol()) { // Reset formating on linebreak
-                s.format = [];
-            }
-
-            if(stream.match("**")) {
-                const i = s.format.indexOf("bold");
-                if(i >= 0) {
-                    s.format.splice(i,1);
-                } else {
-                    s.format.push("bold");
-                }
-                return "control";
-            }
-            if(stream.match("__")) {
-                const i = s.format.indexOf("italic");
-                if(i >= 0) {
-                    s.format.splice(i,1);
-                } else {
-                    s.format.push("italic");
-                }
-                return "control";
-            }
-            if(stream.match("%%")) {
-                const i = s.format.indexOf("capi");
-                if(i >= 0) {
-                    s.format.splice(i,1);
-                } else {
-                    s.format.push("capi");
-                }
-                return "control";
+        if(s.inlist) {
+            s.progress++;
+            switch(s.progress - 1) {
+                case 1:
+                    if(s.listtype.length <= 0) {
+                        adds += "list-extra-space0 line-list-env"+s.listenvc;
+                    } else {
+                        if(!stream.match(/\S+\s*/)) console.error("Error 10");
+                        const w = util.getTextWidth(stream.current(), "17px Droid Sans"); // TODO: Get this string from sass...?
+                        return "list line-list-env"+s.listenvc+" list-" + s.listtype + " list-extra-space"+w;
+                    }
+                case 2:
+                    s.progress = 0;
+                    s.inlist = false;
+                    s.listtype = "";
+                    if(stream.match(/\s+/)) return "list-space-after";
+                    break;
             }
         }
         
-        //stream.next();
 
-        let adds = " ";
+        //////////////////////////////////////////////////
+        // 4) Paragraphs
         
+        // unreachable
+        /*
+        if(stream.string.match(/^\s*$/)) { // quasi blank line
+            s.list = []; // End list environment
+            s.listenv = false;
+            console.log("end");
+        }
+        */
 
-        if(s.format.indexOf("math") >= 0) {
+        //////////////////////////////////////////////////
+        // 5) Decoration
+
+        const pairMatcher = (s, prop, stream, symb) => {
+            const e = util.escapeRegExp(symb);
+            if(!s[prop] && stream.match(new RegExp(e+"(([^"+e+"\\s.,;:\!\?\`\'\"].*[^"+e+"\\s.,;:\!\?\`\'\"])|[^"+e+"\\s.,;:\!\?\`\'\"])?"+e), false)) {
+                s[prop] = true;
+                stream.match(symb);
+                return true;
+            } else if(s[prop] && stream.match(symb)) {
+                s[prop] = false;
+                return true;
+            }
+            return false;
+        };
+
+        if(pairMatcher(s, "src", stream, "`")) return "control "+adds; // TODO: Escape \`
+        if(s.src) { 
+            if(s.src) adds += "isrc ";
+            if(!stream.match(/[^\`]+/)) console.error("Error 11"); // TODO: Escape \`
+            return adds;
+        }
+
+        if(pairMatcher(s, "math", stream, "$")) return "control "+adds; // TODO: Escape \$
+        if(s.math) { 
+            if(s.math) adds += "imath ";
+            if(!stream.match(/[^\$]+/)) console.error("Error 12"); // TODO: Escape \$
+            return adds;
+        }
+       
+        if(pairMatcher(s, "bold", stream, "*")) return "control "+adds;
+        if(pairMatcher(s, "italic", stream, "_")) return "control "+adds;
+        if(pairMatcher(s, "strike", stream, "~")) return "control "+adds;
+        if(pairMatcher(s, "caps", stream, "%")) return "control "+adds;
+
+        if(s.bold) adds += "bold ";
+        if(s.italic) adds += "italic ";
+        if(s.strike) adds += "strike ";
+        if(s.caps) adds += "caps ";
         
-            if(!util.defined((stream as any).lineOracle)) console.error("Error 8");
-            const line = (stream as any).lineOracle.line;
-            const ch = stream.pos + 1;
-
-            if(!stream.match(/[^$]+/)) {
-                stream.next();                
-                console.error("Error 1!");
-            }
-            
-            const x = mathSplit(stream.current());
-            if(x[0] >= 0 && x[1] >= 0) {
-                const xstr = x[0]+"x"+x[1];
-                if(mathSizes.indexOf(xstr) < 0) {
-                    mathSizes.push(xstr);
-                    util.createCSSSelector(".cm-span"+xstr, "padding-right:"+x[0]+"px;line-height:"+x[1]+"px");
-                }
-                adds += "span"+xstr;
-            }
-
-            adds += " inlwid" + s.inlineWidgetCount + "x" + line + "x" + ch + " wid" + s.inlineWidgetCount;
-            s.inlineWidgetCount++;
-
-            // Centered if it is the only thing in this line:
-            if(s.mathLine) {
-                if(stream.match(/\$$/,false)) {
-                    adds += " math-center";
-                } else {
-                    s.mathLine = false;
-                }
-            }
-
-        }
-        else {
-            if(!stream.match(/[^*$_%#`]+/)) {
-                stream.next();
-                //console.error("Error 2!");
-            }  
-        }
         
-        if(s.format.length > 0) {
-            return s.format.join(" ") + adds;
-        } else {
-            return "default-text" + adds;
+        //////////////////////////////////////////////////
+        // 6) Objects
+
+        if(s.link || s.media) {
+            s.progress++;
+            switch(s.progress - 1) {
+                case 1: stream.match(/[^\]]*/i); if(s.link) return "link-text"; else return "media-title";
+                case 2: stream.match(/]\s*\(\s*/i); return "control";
+                case 3: stream.match(new RegExp(util.regexUrl, 'i')); return "control url";
+                case 4: stream.match(/\s*\)/i); s.progress = 0; s.link = false; s.media = false; return "control";
+            }
         }
+
+        if(stream.match(new RegExp(`\\!\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)`, 'i'), false)) {  
+            s.media = true;
+            s.progress = 1;
+            stream.match(/\!\[/i);
+            return "control " + adds;
+        }
+        if(stream.match(new RegExp(`\\[[^\\[\\]]*\\]\\s*\\(\\s*(${util.regexUrl})\\s*\\)*`, 'i'), false)) {  
+            s.link = true;
+            s.progress = 1;
+            stream.match(/\!\[/i);
+            return "control " + adds;
+        }
+
+        if(stream.match(/\[\s?\]\s*$/)) {
+            return "qed-box " + adds;
+        }
+        if(stream.match(/q\.?e\.?d\.?\s*$/i)) {
+            return "qed " + adds;
+        }
+        if(stream.match(/\-\-/)) {
+            return "nut " + adds;
+        }
+        if(stream.match(/[@#]\w+\b/)) {
+            return "reference " + adds;
+        }
+
+        stream.next();
+        return adds;
+
     }
     };
 }); 
 
-//CodeMirror.defineMIME("text/x-hypermd", "hypermd");

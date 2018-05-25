@@ -149,3 +149,16 @@ export function reduce<T, B>(array: Array<T>, callback: (acc: B, val: T, i?: num
     }
     return accumulator;
 };
+
+// https://stackoverflow.com/a/3809435/6144727
+export const regexUrl = "https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)";
+
+// https://stackoverflow.com/a/267405/6144727
+export const regexRoman = "M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})";
+
+// https://stackoverflow.com/a/21015393/6144727
+const getTextWidthContext = document.createElement("canvas").getContext("2d");
+export function getTextWidth(text, font) {
+    getTextWidthContext.font = font;
+    return Math.ceil(getTextWidthContext.measureText(text).width);
+}
