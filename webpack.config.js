@@ -1,13 +1,9 @@
 var webpack = require('webpack'); 
 
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const path = require('path');
 
-const ExtractTextPlugin = require("extract-text-webpack-plugin");
-const extractSass = new ExtractTextPlugin({
-  filename: "[name].[contenthash].css",
-  disable: process.env.NODE_ENV === "development"
-});
+const sassJsUtil = require('./src/util/sass.js.util');
 
 let RELEASE = false; // TODO: Select Release or not!
 
@@ -50,9 +46,15 @@ module.exports = {
       ,{ 
         test: /\.modernizrrc$/,
         loader: "modernizr-loader!json-loader"
-      },
-      { test:/\.(s*)css$/, use:['style-loader','css-loader', 'sass-loader'] },
-      {
+      }
+      ,{ test: /\.(s*)css$/, use:['style-loader','css-loader',{
+          loader: "sass-loader",
+          options: {
+            functions: { "get($keys)": sassJsUtil.sassGet }
+          }
+        }]
+      }
+      ,{
         test: /\.js$/,
         exclude: /(node_modules|bower_components)/,
         use: {

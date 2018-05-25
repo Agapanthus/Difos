@@ -69,7 +69,7 @@ export const _math = (htmlElement: HTMLElement, content: string, callback: Funct
 
     (mq as any).registerEmbed('thing', function(data_) {
         return {
-          htmlString: '<span class="embedded-html">'+`<div class='${loader.loader}' style='border-color: ${styles.c1}'><div style='background: ${styles.c1}'></div></div>`+'</span>',
+          htmlString: '<span class="embedded-html">'+`<div class='${loader.loader}' style='border-color: ${styles.f.struct}'><div style='background: ${styles.f.struct}'></div></div>`+'</span>',
           text: function () { return "embedded text" },
           latex: function () { return "\\embed{thing}" } // Text zum kopieren
         };

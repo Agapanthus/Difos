@@ -202,12 +202,12 @@ function indentWrap(cm, line, elt) {
     const charWidth = cm.defaultCharWidth();
     const basePadding = 2;
     
-    // TODO: Really need to check this?
+    // TODO: Do I really need to check this?
     if(cm.getOption("tabSize") !== 1) console.error("Assuming tab == 1");
     
     const white = line.text.search(/\S|$/);
     const spacesw = white; // + line.text.substr(0, white).split(/\t/).length * (cm.getOption("tabSize") - 1);
-    const _off = 40 * spacesw;
+    const _off = parseInt(styles.indent) * spacesw;
     elt.style.textIndent = "-" + _off + "px";
     elt.style.paddingLeft = (basePadding + _off) + "px";
 }

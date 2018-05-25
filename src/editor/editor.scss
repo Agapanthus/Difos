@@ -1,4 +1,3 @@
-@import 'theme';
 @import '../util/util';
 
 
@@ -16,7 +15,7 @@
 
 @mixin hidetext() { // NEVER use display: none to hide a span!
   color: transparent;
-  font-family: $f_code;
+  font-family: get("f.code");
   font-size: 10px;
   letter-spacing: -5px; // Hide the text and set width=0
 }
@@ -31,7 +30,7 @@
     margin-top: $margintop + px;
     margin-bottom: 10px;
     height: 1px;
-    background: $c_struct;
+    background: get("c.struct");
   }
 }
 
@@ -45,7 +44,7 @@
     margin-top: $margintop + px;
     margin-bottom: 10px;
     height: 1px;
-    background: $c_struct;
+    background: get("c.struct");
   }
 }
 
@@ -53,12 +52,12 @@
 /*********************[    General    ]**************************************/
 
 .cm-s-difos-default {
-  font-family: $f_text;
+  font-family: get("f.text");
   line-height: 1.7;
-  font-size: $fontsize;
+  font-size: get("fontsize");
 
   .cm-control {
-    color: $c_control;
+    color: get("c.control");
   }
 
  &.WYSIWYG .cm-control {
@@ -81,11 +80,11 @@
 }
 
 .cm-math {
-  color: $c_math;
+  color: get("c.math");
 }
 
 .cm-imath {
-  color: $c_math;
+  color: get("c.math");
 }
 
 
@@ -93,7 +92,7 @@
 /*********************[ 1b) Src       ]**************************************/
 
 .cm-isrc {
-  font-family: $f_code;
+  font-family: get("f.code");
   background: rgba(0,0,0,0.05);
   border-radius: 5px;
   border: 1px solid rgba(0,0,0,0.1);
@@ -102,7 +101,7 @@
 }
 
 .cm-src {
-  font-family: $f_code;
+  font-family: get("f.code");
   width: 100%;
   margin: 0;
 }
@@ -129,17 +128,17 @@
 
 .cm-url {
   text-decoration: underline;
-  color: $c_link;
+  color: get("c.link");
 }
 
 .cm-link-text {
   text-decoration: underline;
-  color: $c_link;
+  color: get("c.link");
 }
 
 .cm-reference {
   text-decoration: underline;
-  color: $c_link;
+  color: get("c.link");
 }
 
 .mq-editable-field.mq-focused {
@@ -154,29 +153,29 @@
 /*********************[ 2) Structure  ]**************************************/
 
   .cm-h1 { 
-    color: $c_text;
-    font-size: $fontsize * pow($fontratio,2);
+    color: get("c.text");
+    font-size: get("fontsize") * pow(get("fontratio"),2);
     font-weight: bold;
-    font-family: $f_h1;
+    font-family: get("f.h1");
     line-height: 3.0; // TODO: Das muss besser gehen: Mehrzeilige Header sehen total komisch aus. Bitte zusammenziehen!
     @include lineafter(-39);
   }
 
   .cm-h2 {
-    color: $c_text;
-    font-size: $fontsize * pow($fontratio,1);
+    color: get("c.text");
+    font-size: get("fontsize") * pow(get("fontratio"),1);
     font-weight: bold;
-    font-family: $f_h2;
+    font-family: get("f.h2");
     line-height: 3.5;
     @include lineafter(-28);
   }
 
   .cm-h3 {
-    color: $c_text;
-    font-size: $fontsize * pow($fontratio,0);
+    color: get("c.text");
+    font-size: get("fontsize") * pow(get("fontratio"),0);
     font-weight: bold;
     line-height: 3.5;
-    font-display: $f_text;
+    font-display: get("fonts.text");
   }
 
   
@@ -192,19 +191,19 @@
 
   @for $i from 0 through 50 {
     .cm-list-extra-space#{$i} {
-      padding-left: $indent - $i;
+      padding-left: get("indent") - $i;
     }
   }
 
   @for $i from 1 through 16 {
     .cm-list-level#{$i} {
-      padding-left: $i * $indent;
+      padding-left: $i * get("indent");
     }
   }
 
   .cm-list-star {
     color: transparent;
-    font-family: $f_code;
+    font-family: get("f.code");
     size: 13px;
     &:before {
       position: absolute;  
@@ -212,14 +211,14 @@
       margin-top: 13px;
       width: 4px;
       height: 4px;
-      background: $c_text;
+      background: get("c.text");
       border-radius: 50%;
       content: " ";
     }
   }
   .cm-list-quot {
     color: transparent;
-    font-family: $f_code;
+    font-family: get("f.code");
     size: 13px;
     &:before {
       position: absolute;  
@@ -227,7 +226,7 @@
       margin-top: 0;
       width: 3px;
       height: 100%;
-      background: $c_struct;
+      background: get("c.struct");
       content: " ";
     }
   }
@@ -259,7 +258,7 @@
 .cm-qed-box {
   float: right;
   color: transparent;
-  font-family: $f_code;
+  font-family: get("f.code");
   font-size: 12px;
   &:before {
     display: inline-block;
@@ -268,7 +267,7 @@
     width: 10px;
     margin-top: 8px;
     height: 10px;
-    border:  1px solid $c_text;
+    border:  1px solid get("c.text");
   }
 }
 
@@ -285,10 +284,10 @@
     display: inline-block;
     position: absolute;
     content: '–';
-    color: $c_text;
+    color: get("c.text");
     margin-left: -4px;
-    font-family: $f_text;
-    font-size: $fontsize;
+    font-family: get("f.text");
+    font-size: get("fontsize");
   }
 }
 

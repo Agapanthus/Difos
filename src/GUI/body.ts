@@ -20,7 +20,7 @@ export namespace body {
         width: "50%",
         position: "relative",
         border: "none",
-        borderTop: "3px solid " + styles.c8,
+        //borderTop: "3px solid " + styles.c8,
         margin: "0 auto",
         padding: "20px",
         background: "transparent"
