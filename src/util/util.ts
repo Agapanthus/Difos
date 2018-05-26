@@ -166,7 +166,7 @@ export function getTextWidth(text, font) {
 // Returns true iff the arrays intersect
 export function testIntersect<T>(a: Array<T>, b: Array<T>) {
     for(let c of a) {
-        if(b.indexOf(c) > 0) return true;
+        if(b.indexOf(c) >= 0) return true;
     }
     return false;
 }

@@ -351,10 +351,10 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             return "control " + adds;
         }
 
-        if(stream.match(/\[\s?\]\s*$/)) {
+        if(stream.match(/\s\[\s?\]\s*$/)) { // TODO: $$ [] is very strange
             return "qed-box " + adds;
         }
-        if(stream.match(/q\.?e\.?d\.?\s*$/i)) {
+        if(stream.match(/\sq\.?e\.?d\.?\s*$/i)) {
             return "qed " + adds;
         }
         if(stream.match(/ \-\- /)) {

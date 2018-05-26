@@ -395,7 +395,32 @@ function charsAround(doc: CodeMirror.Doc, pos: CodeMirror.Position) {
     return str.length == 2 ? str : null;
 }
 
+
+
+
+
 function wholeRangePrevented(cm: CMEditEx, range: {anchor: CodeMirror.Position, head: CodeMirror.Position}): boolean {
-    return util.testIntersect( (cm as any).getTokenTypeAt(range.head).split(" "), cm.state.autocomplete.prevent)
-            && (rEmpty(range) || util.testIntersect( (cm as any).getTokenTypeAt(range.anchor).split(" "), cm.state.autocomplete.prevent))
+    const p = cm.state.autocomplete.prevent;
+
+    if(!rEmpty(range)) {
+        const tt = (cm as any).getTokenTypeAt(range.anchor);
+        if(tt && !util.testIntersect(tt.split(" "), p)) {
+            const tt2 = (cm as any).getTokenTypeAt({line: range.anchor.line, ch: range.anchor.ch + 1});
+            if(tt2 && !util.testIntersect(tt2.split(" "), p) ) {
+                return false;
+            }
+        } else if(!tt) return false;
+    }
+
+    const tt = (cm as any).getTokenTypeAt(range.head);
+    if(tt && !util.testIntersect(tt.split(" "), p)) {
+        const tt2 = (cm as any).getTokenTypeAt({line: range.head.line, ch: range.head.ch + 1});
+        if(tt2 && !util.testIntersect(tt2.split(" "), p) ) {
+            return false;
+        }
+    } else if(!tt) return false;
+    
+    return true;
 }
+
+
