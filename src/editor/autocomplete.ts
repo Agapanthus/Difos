@@ -289,10 +289,11 @@ function handleBackspace(cm: CMEditEx) {
         const range = ranges[i];   
         if(wholeRangePrevented(cm, range)) prevented++;
     }
-    if(prevented === ranges.length) return CodeMirror.Pass;
+    //if(prevented === ranges.length) return CodeMirror.Pass;
 
 
-    let changed = removeEmptyPairs(doc, ranges, pairs);
+    let changed;
+    changed = changed || ((prevented === ranges.length) ? false : removeEmptyPairs(doc, ranges, pairs));
     changed = changed || skipDeleteOp(doc, cm, ranges, cm.state.autocomplete.solidpairs);
     if(!changed) return CodeMirror.Pass;
 }
