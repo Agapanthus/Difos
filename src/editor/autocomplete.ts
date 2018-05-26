@@ -297,67 +297,121 @@ function handleBackspace(cm: CMEditEx) {
     if(!changed) return CodeMirror.Pass;
 }
 
+/*
+linen is the number of the line before the line to predict
+plinen is the number of the last previous line of this list level
+*/
+function listPredict(doc: CodeMirror.Doc, linen: number, plinen: number, tabSize: number): { list: string, listtype: string, indent: number } {
+    let list = "";
+    let listtype = "";
+
+    const line = doc.getLine(linen);
+    const lt = getListtype(line);   
+    listtype = lt;        
+    const white = line.search(/\S|$/);
+    const indentc = white + line.substr(0, white).split(/\t/).length * (tabSize - 1);
+    let indent = "";
+    for(let u=0; u<indentc; u++) indent += " ";
+
+    const m = line.match(/\s+(\S+)(?:$|\s+)/);
+    if(m && lt.length > 0) {
+        const it = m[1];
+        switch(lt) {
+            case "nump": list = indent + (parseInt(it)+1) + ")"; break;
+            case "numd": list = indent + (parseInt(it)+1) + "."; break;
+            case "alpp": {
+                let isalpp = true;
+                if(it.match(/[ivxmcld]/i)) { // Find out, if this might be a roman number
+                    const line2 = doc.getLine(plinen);
+                    const lt2 = getListtype(line2);        
+                    if(lt2 === "romp") isalpp = false; // Previous item is a not-one-digit roman number
+                    else {
+                        let it2 = "";
+                        const m2 = line2.match(/\s+(\S+)(?:$|\s+)/);
+                        if(m2 && lt2.length > 0) it2 = m2[1];
+                        if(it.toLowerCase() === "i)" && it2.toLowerCase() !== "h)") isalpp = false; // This is i) and previous one is not h) => start roman list
+                    }
+                }
+                if(isalpp) {
+                    list = indent + String.fromCharCode(it.charCodeAt(0) + 1)  + ")";
+                    break;
+                }
+                
+            } // Fallthrough, default to romp
+            case "romp":
+            case "romd": {
+                let end;
+                if(lt === "romd") {
+                    end = ".";
+                    listtype = "romd";
+                } else {
+                    end = ")";
+                    listtype = "romp";
+                }
+                const n = util.deromanize(it.substr(0,it.length - 1));
+                if(!n) list = indent + "?" + end; 
+                else if(it === it.toLowerCase()) list = indent + (util.romanize((n as number) + 1) as string).toLowerCase() + end; 
+                else list = indent + util.romanize((n as number) + 1) + end;
+            } break;
+            case "worp": list = indent + it; break;
+            case "quot": list = indent + ">"; break;
+            case "star": list = indent + "*"; break;
+            case "minu": list = indent + "-"; break;
+            default: list = indent;
+        }
+    }
+
+    return { list: list, listtype: listtype, indent: indentc };
+}
+
+function recalculateList(cm: CMEditEx, doc: CodeMirror.Doc, listtype: string, line: number, gindent: number, tabSize: number) {
+    let lline = line-1;
+    const replacements = [];
+    while(true) {
+        if(doc.getLine(line).match(/^s*$/)) { // blank
+            line++;
+            continue;
+        }
+        const pred = listPredict(doc, line, lline, tabSize);
+        if(pred.indent > gindent) { // Skip sublist
+            line++;
+            continue; 
+        }
+        if(pred.indent < gindent) break; // End list
+        if(pred.listtype != listtype) break; // type changed? Uh...
+          
+        
+        const tline = doc.getLine(line);
+        const m = tline.match(/(\s+\S+)($|\s)/); 
+        if(!m) {
+            console.log(m);
+            break;
+        } 
+        const oldStart = m[1];           
+        replacements.push([pred.list, {line: line, ch: 0 }, {line: line, ch: oldStart.length}]);
+        
+        lline = line;
+        line++;
+    }
+
+    for(let r of replacements) {        
+        doc.replaceRange(r[0], r[1], r[2]);
+    }
+}
+
 function continueList(cm: CMEditEx, doc: CodeMirror.Doc, ranges: Array<TRange>) {
     const linesep = (cm as any).lineSeparator() || "\n";
     let replacements = [];
     const ts = cm.getOption("tabSize");
-    //doc.replaceSelection(linesep, null);
     for (let i = 0; i < ranges.length; i++) {
-        const range = ranges[i];   
-        //if(rEmpty(range)) {
-            const line = doc.getLine(range.head.line);
-            const lt = getListtype(line);           
-            const white = line.search(/\S|$/);
-            const indentc = white + line.substr(0, white).split(/\t/).length * (ts - 1);
-            let indent = "";
-            for(let u=0; u<indentc; u++) indent += " ";
-
-            const m = line.match(/\s+(\S+)(?:$|\s+)/);
-            if(m && lt.length > 0) {
-                const it = m[1];
-                switch(lt) {
-                    case "nump": replacements.push(linesep + indent + (parseInt(it)+1) + ") "); break;
-                    case "numd": replacements.push(linesep + indent + (parseInt(it)+1) + ". "); break;
-                    case "alpp": {
-                        let isalpp = true;
-                        if(it.match(/[ivxmcld]/i)) { // Find out, if this might be a roman number
-                            const line2 = doc.getLine(range.head.line - 1);
-                            const lt2 = getListtype(line2);        
-                            if(lt2 === "romp") isalpp = false; // Previous item is a not-one-digit roman number
-                            else {
-                                let it2 = "";
-                                const m2 = line2.match(/\s+(\S+)(?:$|\s+)/);
-                                if(m2 && lt2.length > 0) it2 = m2[1];
-                                if(it.toLowerCase() === "i)" && it2.toLowerCase() !== "h)") isalpp = false; // This is i) and previous one is not h) => start roman list
-                            }
-                        }
-                        if(isalpp) {
-                            replacements.push(linesep + indent + String.fromCharCode(it.charCodeAt(0) + 1)  + ") ");
-                            break;
-                        }
-                        
-                    } // Fallthrough, default to romp
-                    case "romp":
-                    case "romd": {
-                        let end = ")";
-                        if(lt === "romd") end = ".";
-                        const n = util.deromanize(it.substr(0,it.length - 1));
-                        if(!n) replacements.push(linesep + indent + "?" + end +" "); 
-                        else if(it === it.toLowerCase()) replacements.push(linesep + indent + (util.romanize((n as number) + 1) as string).toLowerCase() + end + " "); 
-                        else replacements.push(linesep + indent + util.romanize((n as number) + 1) + end + " ");
-                    } break;
-                    case "worp": replacements.push(linesep + indent + it + " "); break;
-                    case "quot": replacements.push(linesep + indent + "> "); break;
-                    case "star": replacements.push(linesep + indent + "* "); break;
-                    case "minu": replacements.push(linesep + indent + "- "); break;
-                    default: replacements.push(linesep + indent);
-                }
-                continue;
-            }
-            replacements.push(linesep + indent);
-            
-        //}
-        replacements.push(linesep);
+        const range = ranges[i];               
+        const pred = listPredict(doc, range.head.line, range.head.line-1, ts);
+        if(pred.listtype.length > 0) replacements.push(linesep + pred.list + " ");
+        else replacements.push(linesep + pred.list); 
+        
+        if(["nump", "numd", "alpp", "romd", "romp"].indexOf(pred.listtype) >= 0) { 
+            recalculateList(cm, doc, pred.listtype, range.head.line + 1, pred.indent, ts);
+        }
     }
 
     (doc as any).replaceSelections(replacements);
