@@ -53,6 +53,31 @@ There are different categories of things to detect.
 
 */
 
+export const getListtype = (str: string) => {            
+    let listtype = "";
+    if(str.match(/^\s*\d+\)($|\s+)/i) ) { // 1) 2) 3)
+        listtype = "nump"; 
+    } else if(str.match(/^\s*\d+\.($|\s+)/i)) { // 1. 2. 3.
+        listtype = "numd"; 
+    } else if(str.match(/^\s*[a-z]\)($|\s+)/i)) { // a) B) c) 
+        listtype = "alpp"; 
+    } else if(str.match(rxs.listtyperoman_p || (rxs.listtyperoman_p = new RegExp("^\\s*" + util.regexRoman + "\\)($|\\s+)", 'i')))) { // i) II) iii)
+        listtype = "romp"; 
+    } else if(str.match(rxs.listtyperoman_d || (rxs.listtyperoman_d = new RegExp("^\\s*" + util.regexRoman + "\\.($|\\s+)", 'i')))) { // i. II. iii.
+        listtype = "romd"; 
+    } else if(str.match(/^\s*[\w\d]+\)($|\s+)/i)) { // a) 1) c) hallo) Aufgabe1)
+        listtype = "worp"; 
+    } else if(str.match(/^\s*\>($|\s+)/i)) { // quote // TODO: Warum wird aus -> ein einfaches quot?!
+        listtype = "quot"; 
+    } else if(str.match(/^\s*\*($|\s+)/i)) { // *
+        listtype = "star"; 
+    } else if(str.match(/^\s*\-($|\s+)/i)) { // -
+        listtype = "minu"; 
+    } 
+    return listtype;
+}
+
+
 const mathSizes: Array<string> = [];
 
 let rxs: any = {}; // Regexp-Cache
@@ -203,32 +228,9 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
 
         let adds = ""; // Will be added to the token in 4) and later
 
-        const getListtype = (consume) => {            
-            let listtype = "";
-            if(stream.match(/\s*\d+\)($|\s+)/i,consume) ) { // 1) 2) 3)
-                listtype = "nump"; 
-            } else if(stream.match(/\s*\d+\.($|\s+)/i,consume)) { // 1. 2. 3.
-                listtype = "numd"; 
-            } else if(stream.match(rxs.listtyperoman_p || (rxs.listtyperoman_p = new RegExp("\\s*" + util.regexRoman + "\\)($|\\s+)", 'i')),consume)) { // i) II) iii)
-                listtype = "romp"; 
-            } else if(stream.match(rxs.listtyperoman_d || (rxs.listtyperoman_d = new RegExp("\\s*" + util.regexRoman + "\\.($|\\s+)", 'i')),consume)) { // i. II. iii.
-                listtype = "romd"; 
-            } else if(stream.match(/\s*[a-z]\)($|\s+)/i,consume)) { // a) B) c) 
-                listtype = "alpp"; 
-            } else if(stream.match(/\s*[\w\d]+\)($|\s+)/i,consume)) { // a) 1) c) hallo) Aufgabe1)
-                listtype = "worp"; 
-            } else if(stream.match(/\s*\>($|\s+)/i,consume)) { // quote
-                listtype = "quot"; 
-            } else if(stream.match(/\s*\*($|\s+)/i,consume)) { // *
-                listtype = "star"; 
-            } else if(stream.match(/\s*\-($|\s+)/i,consume)) { // -
-                listtype = "minu"; 
-            } 
-            return listtype;
-        }
-
+       
         if(stream.sol()) {
-            s.listtype = getListtype(false);
+            s.listtype = getListtype(stream.string);
                     
             let level = stream.indentation() - 1;
             let emptyLine = false;

@@ -12,6 +12,12 @@ import * as styles from "../util/styles";
 
 import * as CMH from "../../node_modules/codemirror/src/line/highlight.js";
 
+import { getListtype } from "./mode";
+
+
+interface TRange {anchor: CodeMirror.Position, head: CodeMirror.Position};
+
+
 // Calculates state based on the given state and code
 function hypotheticalState(cm: CMEditEx, lines: Array < string > , firstStart: number, firstLine: number, istate: any) {
     const mode = cm.getDoc().getMode();
@@ -200,7 +206,8 @@ CodeMirror.defineOption("autocomplete", {
             solidpairs: val.solidpairs || "",
             prevent: val.prevent || [],
             keymap: {
-                Backspace: handleBackspace // Todo: DEL?
+                Backspace: handleBackspace, // Todo: DEL?
+                Enter: handleEnter
             }
         };
 
@@ -225,7 +232,7 @@ CodeMirror.defineOption("autocomplete", {
 /*
 (|) -> |
 */
-function removeEmptyPairs(doc: CodeMirror.Doc, ranges: Array<{anchor: CodeMirror.Position, head: CodeMirror.Position}>, pairs: string): boolean {
+function removeEmptyPairs(doc: CodeMirror.Doc, ranges: Array<TRange>, pairs: string): boolean {
     for (let i = 0; i < ranges.length; i++) {
       if (!rEmpty(ranges[i])) return false;
       const around = charsAround(doc, ranges[i].head);
@@ -243,7 +250,7 @@ function removeEmptyPairs(doc: CodeMirror.Doc, ranges: Array<{anchor: CodeMirror
 und
 text**| -> text|
 */
-function skipDeleteOp(doc: CodeMirror.Doc, cm: CMEditEx, ranges: Array<{anchor: CodeMirror.Position, head: CodeMirror.Position}>, pairs: string): boolean {
+function skipDeleteOp(doc: CodeMirror.Doc, cm: CMEditEx, ranges: Array<TRange>, pairs: string): boolean {
     for (let i = 0; i < ranges.length; i++) {
         if (!rEmpty(ranges[i])) return false;
         const cur = ranges[i].head;
@@ -287,6 +294,85 @@ function handleBackspace(cm: CMEditEx) {
 
     let changed = removeEmptyPairs(doc, ranges, pairs);
     changed = changed || skipDeleteOp(doc, cm, ranges, cm.state.autocomplete.solidpairs);
+    if(!changed) return CodeMirror.Pass;
+}
+
+function continueList(cm: CMEditEx, doc: CodeMirror.Doc, ranges: Array<TRange>) {
+    const linesep = (cm as any).lineSeparator() || "\n";
+    let replacements = [];
+    const ts = cm.getOption("tabSize");
+    //doc.replaceSelection(linesep, null);
+    for (let i = 0; i < ranges.length; i++) {
+        const range = ranges[i];   
+        //if(rEmpty(range)) {
+            const line = doc.getLine(range.head.line);
+            const lt = getListtype(line);           
+            const white = line.search(/\S|$/);
+            const indentc = white + line.substr(0, white).split(/\t/).length * (ts - 1);
+            let indent = "";
+            for(let u=0; u<indentc; u++) indent += " ";
+
+            const m = line.match(/\s+(\S+)(?:$|\s+)/);
+            if(m && lt.length > 0) {
+                const it = m[1];
+                switch(lt) {
+                    case "nump": replacements.push(linesep + indent + (parseInt(it)+1) + ") "); break;
+                    case "numd": replacements.push(linesep + indent + (parseInt(it)+1) + ". "); break;
+                    case "alpp": {
+                        let isalpp = true;
+                        if(it.match(/[ivxmcld]/i)) { // Find out, if this might be a roman number
+                            const line2 = doc.getLine(range.head.line - 1);
+                            const lt2 = getListtype(line2);        
+                            if(lt2 === "romp") isalpp = false; // Previous item is a not-one-digit roman number
+                            else {
+                                let it2 = "";
+                                const m2 = line2.match(/\s+(\S+)(?:$|\s+)/);
+                                if(m2 && lt2.length > 0) it2 = m2[1];
+                                if(it.toLowerCase() === "i)" && it2.toLowerCase() !== "h)") isalpp = false; // This is i) and previous one is not h) => start roman list
+                            }
+                        }
+                        if(isalpp) {
+                            replacements.push(linesep + indent + String.fromCharCode(it.charCodeAt(0) + 1)  + ") ");
+                            break;
+                        }
+                        
+                    } // Fallthrough, default to romp
+                    case "romp":
+                    case "romd": {
+                        let end = ")";
+                        if(lt === "romd") end = ".";
+                        const n = util.deromanize(it.substr(0,it.length - 1));
+                        if(!n) replacements.push(linesep + indent + "?" + end +" "); 
+                        else if(it === it.toLowerCase()) replacements.push(linesep + indent + (util.romanize((n as number) + 1) as string).toLowerCase() + end + " "); 
+                        else replacements.push(linesep + indent + util.romanize((n as number) + 1) + end + " ");
+                    } break;
+                    case "worp": replacements.push(linesep + indent + it + " "); break;
+                    case "quot": replacements.push(linesep + indent + "> "); break;
+                    case "star": replacements.push(linesep + indent + "* "); break;
+                    case "minu": replacements.push(linesep + indent + "- "); break;
+                    default: replacements.push(linesep + indent);
+                }
+                continue;
+            }
+            replacements.push(linesep + indent);
+            
+        //}
+        replacements.push(linesep);
+    }
+
+    (doc as any).replaceSelections(replacements);
+
+    return true;
+}
+
+function handleEnter(cm: CMEditEx) {
+    if (!cm.state.autocomplete || cm.getOption("disableInput")) return CodeMirror.Pass;
+
+    const doc = cm.getDoc();
+    const ranges = doc.listSelections();
+
+    let changed = continueList(cm, doc, ranges);
+
     if(!changed) return CodeMirror.Pass;
 }
 
@@ -399,7 +485,7 @@ function charsAround(doc: CodeMirror.Doc, pos: CodeMirror.Position) {
 
 
 
-function wholeRangePrevented(cm: CMEditEx, range: {anchor: CodeMirror.Position, head: CodeMirror.Position}): boolean {
+function wholeRangePrevented(cm: CMEditEx, range: TRange): boolean {
     const p = cm.state.autocomplete.prevent;
 
     if(!rEmpty(range)) {
