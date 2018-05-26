@@ -298,28 +298,30 @@ function handleBackspace(cm: CMEditEx) {
     if(!changed) return CodeMirror.Pass;
 }
 
+function getIndent(line: string, tabSize: number): number {
+    const white = line.search(/\S|$/);
+    return white + line.substr(0, white).split(/\t/).length * (tabSize - 1);
+}
+
 /*
 linen is the number of the line before the line to predict
 plinen is the number of the last previous line of this list level
 */
-function listPredict(doc: CodeMirror.Doc, linen: number, plinen: number, tabSize: number): { list: string, listtype: string, indent: number } {
-    let list = "";
+function listAnalyze(doc: CodeMirror.Doc, linen: number, plinen: number, tabSize: number): { listtype: string, indent: number, count: number} {
     let listtype = "";
+    let value = 0;
 
     const line = doc.getLine(linen);
     const lt = getListtype(line);   
     listtype = lt;        
-    const white = line.search(/\S|$/);
-    const indentc = white + line.substr(0, white).split(/\t/).length * (tabSize - 1);
-    let indent = "";
-    for(let u=0; u<indentc; u++) indent += " ";
-
+    const indentc = getIndent(line, tabSize);
+    
     const m = line.match(/\s+(\S+)(?:$|\s+)/);
     if(m && lt.length > 0) {
         const it = m[1];
         switch(lt) {
-            case "nump": list = indent + (parseInt(it)+1) + ")"; break;
-            case "numd": list = indent + (parseInt(it)+1) + "."; break;
+            case "nump": value = parseInt(it); break;
+            case "numd": value = parseInt(it);break;
             case "alpp": {
                 let isalpp = true;
                 if(it.match(/[ivxmcld]/i)) { // Find out, if this might be a roman number
@@ -334,63 +336,94 @@ function listPredict(doc: CodeMirror.Doc, linen: number, plinen: number, tabSize
                     }
                 }
                 if(isalpp) {
-                    list = indent + String.fromCharCode(it.charCodeAt(0) + 1)  + ")";
+                    value = it.charCodeAt(0);
                     break;
                 }
                 
             } // Fallthrough, default to romp
             case "romp":
             case "romd": {
-                let end;
-                if(lt === "romd") {
-                    end = ".";
-                    listtype = "romd";
-                } else {
-                    end = ")";
-                    listtype = "romp";
-                }
+                if(lt === "romd") listtype = "romd";
+                else listtype = "romp";
                 const n = util.deromanize(it.substr(0,it.length - 1));
-                if(!n) list = indent + "?" + end; 
-                else if(it === it.toLowerCase()) list = indent + (util.romanize((n as number) + 1) as string).toLowerCase() + end; 
-                else list = indent + util.romanize((n as number) + 1) + end;
+                if(!n) value = 1;
+                else value = n as number;
+                if(it !== it.toLowerCase()) listtype = listtype.toUpperCase();
             } break;
-            case "worp": list = indent + it; break;
-            case "quot": list = indent + ">"; break;
-            case "star": list = indent + "*"; break;
-            case "minu": list = indent + "-"; break;
-            default: list = indent;
+            case "worp": value = 0; break;
+            case "quot": value = 0; break;
+            case "star": value = 0; break;
+            case "minu": value = 0; break;
+            default: value = 0;;
         }
     }
-
-    return { list: list, listtype: listtype, indent: indentc };
+    return { count: value, listtype: listtype, indent: indentc };
 }
 
-function recalculateList(cm: CMEditEx, doc: CodeMirror.Doc, listtype: string, line: number, gindent: number, tabSize: number) {
-    let lline = line-1;
+function listSynthesize(listtype: string, indentc: number, count: number): string {
+    let indent = "";
+    for(let u=0; u<indentc; u++) indent += " ";
+    switch(listtype) {
+        case "nump": return indent + count + ")";
+        case "numd": return indent + count + "."; 
+        case "alpp": return indent + String.fromCharCode(count) + ")"; // TODO: Modulo?
+        case "romp": return indent + (util.romanize(count) as string).toLowerCase() + ")"; 
+        case "romd": return indent + (util.romanize(count) as string).toLowerCase() + "."; 
+        case "ROMP": return indent + (util.romanize(count) as string) + ")"; 
+        case "ROMD": return indent + (util.romanize(count) as string) + "."; 
+        case "worp": return indent + "?)"; 
+        case "quot": return indent + ">";
+        case "star": return indent + "*"; 
+        case "minu": return indent + "-";
+        default: return indent;
+    }
+}
+
+function listPredict(doc: CodeMirror.Doc, linen: number, plinen: number, tabSize: number, inc: number): { list: string, listtype: string, indent: number, count: number } {
+    let list = "";
+    
+    const dat = listAnalyze(doc, linen, plinen, tabSize);
+
+    return {
+        list: listSynthesize(dat.listtype, dat.indent, dat.count + inc),
+        listtype: dat.listtype,
+        indent: dat.indent,
+        count: dat.count + inc,
+    };
+}
+
+/*
+line is the first line to be predicted
+lline is the previous line of this level
+llline is (if it exists) the line before lline of this level
+*/
+function recalculateList(cm: CMEditEx, doc: CodeMirror.Doc, listtype: string, llline: number, lline: number, line: number, gindent: number, tabSize: number, count: number) {
     const replacements = [];
     while(true) {
         if(doc.getLine(line).match(/^s*$/)) { // blank
             line++;
             continue;
         }
-        const pred = listPredict(doc, line, lline, tabSize);
-        if(pred.indent > gindent) { // Skip sublist
+        const ana = listAnalyze(doc, line, lline, tabSize); // Analyze current line
+
+        if(ana.indent > gindent) { // Skip sublist
             line++;
             continue; 
         }
-        if(pred.indent < gindent) break; // End list
-        if(pred.listtype != listtype) break; // type changed? Uh...
-          
+        if(ana.indent < gindent) break; // End list
+        if(ana.listtype != listtype) break; // type changed? Uh...
         
         const tline = doc.getLine(line);
         const m = tline.match(/(\s+\S+)($|\s)/); 
-        if(!m) {
-            console.log(m);
-            break;
-        } 
-        const oldStart = m[1];           
-        replacements.push([pred.list, {line: line, ch: 0 }, {line: line, ch: oldStart.length}]);
+        if(!m) break;
+        const oldStart = m[1];     
+
+        const list = listSynthesize(listtype, gindent, count);
+        count++;
         
+        replacements.push([list, {line: line, ch: 0 }, {line: line, ch: oldStart.length}]);
+        
+        llline = lline;
         lline = line;
         line++;
     }
@@ -403,15 +436,35 @@ function recalculateList(cm: CMEditEx, doc: CodeMirror.Doc, listtype: string, li
 function continueList(cm: CMEditEx, doc: CodeMirror.Doc, ranges: Array<TRange>) {
     const linesep = (cm as any).lineSeparator() || "\n";
     let replacements = [];
-    const ts = cm.getOption("tabSize");
+    const tabSize = cm.getOption("tabSize");
     for (let i = 0; i < ranges.length; i++) {
-        const range = ranges[i];               
-        const pred = listPredict(doc, range.head.line, range.head.line-1, ts);
+        const range = ranges[i];        
+
+
+        let rline = range.head.line - 1; 
+        /////////// Skip above lines which are blank or more indented
+        const gindent = getIndent(doc.getLine(range.head.line), tabSize);
+        while(rline > 0) {
+            const tline = doc.getLine(rline);
+            if(tline.match(/^s*$/)) { // blank
+                rline--;
+                continue;
+            }
+            const indentc = getIndent(tline, tabSize);
+            if(indentc > gindent) { // Skip sublist
+                rline--;
+                continue; 
+            }
+            break;
+        }
+
+
+        const pred = listPredict(doc, range.head.line, rline, tabSize, 1);
         if(pred.listtype.length > 0) replacements.push(linesep + pred.list + " ");
         else replacements.push(linesep + pred.list); 
         
         if(["nump", "numd", "alpp", "romd", "romp"].indexOf(pred.listtype) >= 0) { 
-            recalculateList(cm, doc, pred.listtype, range.head.line + 1, pred.indent, ts);
+            recalculateList(cm, doc, pred.listtype, rline, range.head.line, range.head.line + 1, pred.indent, tabSize, pred.count + 1);
         }
     }
 
