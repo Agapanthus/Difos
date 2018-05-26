@@ -134,10 +134,10 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 s.progress++;
                 switch(s.progress - 1) {
                     case 1: 
-                        if(stream.match(/\w+\s*$/i)) {
+                        if(stream.match(/.+\s*$/i)) {
                             s.progress++;
                             return "control src-language";
-                        } else if(stream.match(/\w+\s*/i)) {
+                        } else if(stream.match(/.+\s*/i)) {
                             return "control src-language";
                         } else {
                             console.error("Error 10");
