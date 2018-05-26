@@ -25,6 +25,7 @@ module.exports = {
 
     },
 
+    punctuation: ".,;:!?\'\"",
     
     fontsize: "17px",  // default font-size
     fontratio: 1.61803398875, // Ratio from font-size per level

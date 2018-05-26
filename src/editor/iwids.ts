@@ -20,7 +20,13 @@ export type CMEditEx = CMEdit<{
     iwids: Array<InlineWidget>, 
     navigateFormula: boolean, 
     formula: boolean, 
-    autocomplete: boolean,
+    autocomplete: {
+        openpairs: string,
+        solidpairs: string,
+        prevent: Array<string>,
+        keymap: object
+    },
+    autocomplete_keymap: object,
     oldLength: number,
     indentWrap: boolean,
 }>;

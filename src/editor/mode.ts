@@ -7,6 +7,8 @@ import { mathFormat, mathSplit } from "../editor/math";
 import * as CodeMirror from "codemirror";
 import { Z_STREAM_END } from "zlib";
 
+import * as styles from "../util/styles";
+
 
 // TODO: Wenn man die Seite im Hintergrund neulädt, ist CodeMirror nicht aktuell! z.B. sind die Auswahlzeilen teilweise falsch!
 // TODO: Wenn man vor Liste navigiert, Cursor so navigieren, dass er nicht in der Spaces-sektion ist, sondern danach
@@ -39,10 +41,9 @@ There are different categories of things to detect.
         ~ strike
         % small caps
         ` src
-    is always paired
     NOT markdown
-    ignored, if followed by punctuation or space
-    every symbol toggles the mode, e.g. *a* = *a*** != **a** = a
+    opening ignored, if followed by punctuation or space
+    every symbol toggles the mode, e.g. *a = *a* = *a*** != **a** = a
 6) Objects
     [], qed, QED... at the lineending will be aligned right
     ![title](url) is an media object
@@ -88,6 +89,11 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
     },
     token: function (stream, s) {
 
+        // Reset Formatting
+        if(stream.sol()) {
+            s.bold = s.italic = s.strike = s.caps = false;
+            if(!s.widget) s.math = s.src = false;
+        }
         
         //////////////////////////////////////////////////
         // 1) Widgets
@@ -207,7 +213,9 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 listtype = "romp"; 
             } else if(stream.match(rxs.listtyperoman_d || (rxs.listtyperoman_d = new RegExp("\\s*" + util.regexRoman + "\\.($|\\s+)", 'i')),consume)) { // i. II. iii.
                 listtype = "romd"; 
-            } else if(stream.match(/\s*[\w\d]+\)($|\s+)/i,consume)) { // a) b) c) hallo) Aufgabe1)
+            } else if(stream.match(/\s*[a-z]\)($|\s+)/i,consume)) { // a) B) c) 
+                listtype = "alpp"; 
+            } else if(stream.match(/\s*[\w\d]+\)($|\s+)/i,consume)) { // a) 1) c) hallo) Aufgabe1)
                 listtype = "worp"; 
             } else if(stream.match(/\s*\>($|\s+)/i,consume)) { // quote
                 listtype = "quot"; 
@@ -269,16 +277,26 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         //////////////////////////////////////////////////
         // 5) Decoration
 
+        /*
+        You can open pairs only, if the opening one is not followed by whitespace or punctuation.
+        But you can close it anywhere (to keep the implementation simple. Just think *of *this example*.).
+        Unpaired ones will also work (to keep the implementation simple. Just think of *` *` and *` `*.)
+        */
         const pairMatcher = (s, prop, stream, symb) => {
-            const e = util.escapeRegExp(symb);
-            if(!s[prop] && stream.match(rxs["pairMatcher_"+e] || (rxs["pairMatcher_"+e] = new RegExp(e+"(([^"+e+"\\s.,;:\!\?\`\'\"].*[^"+e+"\\s.,;:\!\?\`\'\"])|[^"+e+"\\s.,;:\!\?\`\'\"])?"+e)), false)) {
+            if(stream.peek() !== symb) return false; // Less Regexp == better performance (this was significant!)
+            const e = rxs["escaped_"+symb] || (rxs["escaped_"+symb] = util.escapeRegExp(symb));
+            
+            if(!s[prop] && stream.match(symb+symb)) { // Double symbols aren't control chars
+                return false;
+            } else if(!s[prop] && stream.match(rxs["pairMatcher_"+e] || (rxs["pairMatcher_"+e] = new RegExp(e+"[^\\s" + util.escapeRegExp(styles.punctuation) + "]")), false)) {
                 s[prop] = true;
                 stream.match(symb);
                 return true;
-            } else if(s[prop] && stream.match(symb)) {
+            } else if(s[prop] && stream.match(symb)) { 
                 s[prop] = false;
                 return true;
             }
+
             return false;
         };
 
@@ -339,14 +357,14 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
         if(stream.match(/q\.?e\.?d\.?\s*$/i)) {
             return "qed " + adds;
         }
-        if(stream.match(/\-\-/)) {
+        if(stream.match(/ \-\- /)) {
             return "nut " + adds;
         }
         if(stream.match(/[@#]\w+\b/)) {
             return "reference " + adds;
         }
 
-        stream.next();
+        if(stream.current().length === 0) stream.next(); // TODO: Don't read just one char! Read as much as possible for the sake of performance! )-:
         return adds;
 
     }

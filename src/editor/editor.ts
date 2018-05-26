@@ -71,9 +71,8 @@ export class Editor {
         this.cm = CodeMirror(host => a.appendChild(host), {
             value: 
 `# Difos
-Man kann Text *formatieren*, wie man will! Dabei gibt es sogar _über*lappendes_ Layout* und man kann auch Namen ~Bekannter~ %Irgendwelcher% Leute angemessen notieren. Die Zeichen heben sich gegenseitig auf, d.h., **doppelt** wirkt nicht, ***dreifach*** schon. In der Verwendung am Wortende, e.g. 1%, 2%; 3% und 4* oder vereinzelte *Zeichen, nicht jedoch wenn sie mehrfach sind, wie etwa Einkaufs_liste und Listen_Einkauf, bleiben sie ohne Beachtung.
-Das _Zeilenende_ können solche Zeichen _nicht überspannen.
-Wie_ man hier sieht.
+Man kann Text *formatieren*, wie man will! Dabei gibt es sogar _über*lappendes_ Layout* und man kann auch Namen ~Bekannter~ %Irgendwelcher% Leute angemessen notieren. Die Zeichen heben sich gegenseitig auf, d.h., **doppelt** wirkt nicht, ***dreifach*** schon. In der Verwendung am Wortende, e.g. 1%, 2%; 3% und 4*, nicht jedoch wenn sie mehrfach sind, wie etwa Einkaufs_liste und Listen_Einkauf, bleiben sie ohne Beachtung.
+Das _Zeilenende_ können solche Zeichen _nicht überspannen_. Sollen sie aber auch nicht!
 
 Mehrfache  Leerzeilen- und Zeichen   werden  im Allgemeinen ignoriert außer sie stehen am #Satzanfang.
  Denn die braucht man für Listen. 
@@ -88,6 +87,7 @@ Und Formeln wie $\\sum_{x=0}^{\\infty}\\pi$ oder $x=0$ oder sogar abgesetzte For
 $\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}$
 gibt es au$\\chi$! qed
 Und natürlich \`*Quellcode*\` mit allen Schikanen! 
+
 \`haskell Binomial
 n \\\`choose\\\` k
     | k < 0     = 0
@@ -156,7 +156,7 @@ Nicht eingerückt und auch sofort Ende der Liste!
             lineWrapping: true,
             foldGutter: false,
             viewportMargin: Infinity, // TODO: Mittelmäßig für Performance...
-        }as any);
+        });
 
         if(this.options.syncOut) {
             const cm = this.cm;
