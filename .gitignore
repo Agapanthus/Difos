@@ -18,6 +18,5 @@ CMakeCache.txt
 *.wasm
 *.pch
 typings
-create.md
 mathquill-matrix
-ideen.txt
+hide

@@ -48,6 +48,9 @@ export const sani_cursor = (cm: CMEditEx) => {
                 }
             }
 
+            // TODO: When creating a fresh math-object, place the cursor inside it! (For now it will jump back to the previous formula on the same line)
+
+
             if(inlwidid < 0) {
                 //console.error("Error 5");
                 // This ok - there is the situation of the newly created math-element which is not yet in the list.

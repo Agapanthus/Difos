@@ -10,14 +10,14 @@ import {
 } from "./iwids";
 import * as styles from "../util/styles";
 
-import * as CMH from "../../node_modules/codemirror/src/line/highlight.js";
+//import * as CMH from "../../node_modules/codemirror/src/line/highlight.js"; // Don't include it! it breaks everything!
 
 import { getListtype } from "./mode";
 
 
 interface TRange {anchor: CodeMirror.Position, head: CodeMirror.Position};
 
-
+/*
 // Calculates state based on the given state and code // TODO: Moderunner-addon verwenden?
 function hypotheticalState(cm: CMEditEx, lines: Array < string > , firstStart: number, firstLine: number, istate: any) {
     const mode = cm.getDoc().getMode();
@@ -37,7 +37,6 @@ function hypotheticalState(cm: CMEditEx, lines: Array < string > , firstStart: n
     }
     return context.state;
 }
-
 
 const sani_cm = (cm: CMEditEx, change: {
     from: CodeMirror.Position,
@@ -174,6 +173,8 @@ const sani_cm = (cm: CMEditEx, change: {
 
 };
 
+*/
+
 
 
 CodeMirror.defineOption("autocomplete", {
@@ -251,6 +252,9 @@ und
 text**| -> text|
 */
 function skipDeleteOp(doc: CodeMirror.Doc, cm: CMEditEx, ranges: Array<TRange>, pairs: string): boolean {
+
+    // TODO: also, skip the size-part of mathobjects
+
     for (let i = 0; i < ranges.length; i++) {
         if (!rEmpty(ranges[i])) return false;
         const cur = ranges[i].head;

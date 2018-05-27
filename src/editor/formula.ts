@@ -6,6 +6,9 @@ import { mathFormat, mathSplit, _math } from "../editor/math";
 import { sani_cursor } from "./navigateFormula";
 
 
+// TODO: Deleting in Formulae leads to serious problems with the part of the line after the math object!
+// TODO: Inline-Formlen werden nicht umgebrochen! Vielleicht sogar in der Formel umbrechen...?
+
 function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t: string) {
     const container = document.createElement("div");
     container.style.position = "absolute";
@@ -158,6 +161,9 @@ const changeProc = (cm: CMEditEx, ch) => {
     });
 
     cm.state.formula_changing = false;
+
+    // TODO: When the size of formula rendered and is added to them dom: Make sure, it won't become a step in history! Otherwise, you can go back to unsized math...
+    // Alternatively: Hide math after every change from cm to mq until the size has updated 
 };
 
 
