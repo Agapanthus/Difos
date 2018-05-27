@@ -18,7 +18,7 @@ import { getListtype } from "./mode";
 interface TRange {anchor: CodeMirror.Position, head: CodeMirror.Position};
 
 
-// Calculates state based on the given state and code
+// Calculates state based on the given state and code // TODO: Moderunner-addon verwenden?
 function hypotheticalState(cm: CMEditEx, lines: Array < string > , firstStart: number, firstLine: number, istate: any) {
     const mode = cm.getDoc().getMode();
 
@@ -282,7 +282,6 @@ function handleBackspace(cm: CMEditEx) {
 
     const doc = cm.getDoc();
     const ranges = doc.listSelections();
-
     
     let prevented = 0; 
     for (let i = 0; i < ranges.length; i++) {
@@ -465,6 +464,7 @@ function continueList(cm: CMEditEx, doc: CodeMirror.Doc, ranges: Array<TRange>) 
         
         if(["nump", "numd", "alpp", "romd", "romp"].indexOf(pred.listtype) >= 0) { 
             recalculateList(cm, doc, pred.listtype, rline, range.head.line, range.head.line + 1, pred.indent, tabSize, pred.count + 1);
+            // TODO: Recalc list on every change on the line-numbers or indices of the list! Use the update-callback!
         }
     }
 

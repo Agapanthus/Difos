@@ -9,6 +9,7 @@ import "./mode";
 
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/monokai.css';
+// import 'codemirror/addon/display/autorefresh.js'; // TODO: Do something similar
 
 
 import * as util from "../util/util";
@@ -70,6 +71,7 @@ export class Editor {
 
         this.cm = CodeMirror(host => a.appendChild(host), {
             value: 
+    
 `# Difos
 Man kann Text *formatieren*, wie man will! Dabei gibt es sogar _über*lappendes_ Layout* und man kann auch Namen ~Bekannter~ %Irgendwelcher% Leute angemessen notieren. Die Zeichen heben sich gegenseitig auf, d.h., **doppelt** wirkt nicht, ***dreifach*** schon. In der Verwendung am Wortende, e.g. 1%, 2%; 3% und 4*, nicht jedoch wenn sie mehrfach sind, wie etwa Einkaufs_liste und Listen_Einkauf, bleiben sie ohne Beachtung.
 Das _Zeilenende_ können solche Zeichen _nicht überspannen_. Sollen sie aber auch nicht!
@@ -121,6 +123,7 @@ a) alles was nicht eingerückt ist, kann keine Liste sein.
 Nicht eingerückt und auch sofort Ende der Liste!
 
 `
+
 /*
 `
 1. Hallo

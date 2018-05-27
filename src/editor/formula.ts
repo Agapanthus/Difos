@@ -6,188 +6,187 @@ import { mathFormat, mathSplit, _math } from "../editor/math";
 import { sani_cursor } from "./navigateFormula";
 
 
-// TODO: Wenn man eine Formel vor den anderen erzeugt, gibt es schwere Probleme beim updaten! Wir brauchen ein besseres System um die char,line-Positionen zu kriegen, als den mode! Das würde auch das Problem der nicht aktuellen Zeilenzahlen lösen.
-// TODO: Wenn man eine noch leere Formel am Ende einer Zeile hat und davor umbricht, wird danach das Dokument zerstört!
+function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t: string) {
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.zIndex = "10";
+    
+    const myEntry = {
+        ch: ch,
+        line: iline,
+        str: t,
+        center: center,
+        inuse: true,
+        width: mathSplit(t)[0],
+        height: mathSplit(t)[1],
+        obj: { m: undefined, c: container }
+    };
+
+    
+    myEntry.obj.m = _math(container, t, function(latex: string, width: number, height: number) {
+        const line = myEntry.line;
+        myEntry.width = width;
+        myEntry.height = height;
+        myEntry.str = latex;
+        const token = cm.getTokenAt({ ch: myEntry.ch, line: line }, true);
+        const x = mathSplit(latex);
+        x[0] = width;
+        x[1] = height;
+        const target = mathFormat(x);
+        const rc = cm.getDoc().getRange( { line: line, ch: token.start},  { line: line, ch: token.end});
+        //console.log("update doc " + line + ":  " + rc + "  ->  " + target)
+        if(target !== rc) {
+            cm.getDoc().replaceRange(target, { line: line, ch: token.start},  { line: line, ch: token.end});
+        }
+        // TODO: Aufpassen! Niemals $ einfügen! Bzw. im mode escapen!
+        // TODO: Verhindere das escapen von % durch mathquill!
+        
+    });
+    
+    console.log("create new");
+
+    cm.addWidget({ ch: ch, line: myEntry.line }, container, true);                   
+    
+    return myEntry;
+}
+
+function updateMath(cm: CMEditEx, inlwidid: number, ch: number, line: number, center: boolean, t: string) {
+    cm.state.iwids[inlwidid].ch = ch;
+    cm.state.iwids[inlwidid].line = line;
+    cm.state.iwids[inlwidid].center = center;
+
+    if(cm.state.iwids[inlwidid].str !== t) {
+        cm.state.iwids[inlwidid].str = t;
+        cm.state.iwids[inlwidid].width = mathSplit(t)[0];
+        cm.state.iwids[inlwidid].height = mathSplit(t)[1];            
+        
+        if(util.defined(cm.state.iwids[inlwidid].obj.m)) {
+            if(mathSplit(t)[2] !== cm.state.iwids[inlwidid].obj.m.latex()) {
+                cm.state.iwids[inlwidid].obj.m.latex(mathSplit(t)[2]);
+            }
+        }    
+    }
+}
 
 const changeProc = (cm: CMEditEx, ch) => {
+    if(cm.state.formula_changing) { // Abort recursiv calls
+        return;
+    } 
+    cm.state.formula_changing = true;
+
 
     if(!util.defined(cm.state.iwids)) console.error("Error 7");
 
     cm.state.iwids.forEach(fw => fw.inuse = false);
+    
 
+    const toCreate = [];
 
-    if(cm.state.formula) $(".cm-math", cm.getWrapperElement()).each((i, obj) => {
+    if(cm.state.formula) $(".cm-math, .cm-imath", cm.getWrapperElement()).each((i, obj) => {
       
         const friendElem = $(obj);
-        let inlwidid = -1;
-        let ch, line;
+        let ch;
         let center = false;
         friendElem.attr('class').split(/\s+/).forEach(e => {
-            if(util.startsWith(e, "cm-inlwid")) {
-                const values = e.substr("cm-inlwid".length).split("x");
-                if(values.length !== 3) console.error(values);
-                inlwidid = parseInt(values[0]);
-                line = parseInt(values[1]);
-                ch = parseInt(values[2]);
+            if(util.startsWith(e, "cm-ch")) {
+                const value = e.substr("cm-ch".length);
+                ch = parseInt(value);
             } 
-            if(e === "cm-math-center") {
+            if(e === "cm-math") {
                 center = true;
+                ch = 2;
             }
         });
-
-        if(inlwidid < 0) {
-            console.error("Error 3");
+        let friendLineElem = friendElem.parent().parent();
+        if(!friendLineElem.hasClass("CodeMirror-line")) {
+            console.error("Error 12");
+            return;
         }
-
-        const t = friendElem.text();
-
-        if(inlwidid < cm.state.iwids.length) { // Update existing iwid
-            cm.state.iwids[inlwidid].ch = ch;
-            cm.state.iwids[inlwidid].line = line;
-            cm.state.iwids[inlwidid].inuse = true;
-            cm.state.iwids[inlwidid].center = center;
+        if(!friendLineElem.parent().hasClass("CodeMirror-code")) { // e.g., if there are is a gutter
+            friendLineElem = friendLineElem.parent();
+        }
+        if(!friendLineElem.parent().hasClass("CodeMirror-code")) {
+            console.error("Error 12");
+            return;
+        }
+        const line = friendLineElem.parent().children().index(friendLineElem);
         
-            if(cm.state.iwids[inlwidid].str !== t) {
-                cm.state.iwids[inlwidid].str = t;
-                cm.state.iwids[inlwidid].width = mathSplit(t)[0];
-                cm.state.iwids[inlwidid].height = mathSplit(t)[1];                
-            
-                if(util.defined(cm.state.iwids[inlwidid].obj.m)) {
-                    if(mathSplit(t)[2] !== cm.state.iwids[inlwidid].obj.m.latex()) {
-                        console.log(mathSplit(t)[2]+ "    "+ cm.state.iwids[inlwidid].obj.m.latex())
-                        cm.state.iwids[inlwidid].obj.m.latex(mathSplit(t)[2]);
-                    }
-                }
-            }
+        const t = friendElem.text();
+        const nameList = cm.state.iwids.map(a => a.inuse ? "%disabled" : mathSplit(a.str)[2]);
+        const inlwidid = nameList.indexOf(mathSplit(t)[2]);
 
+        if(inlwidid < cm.state.iwids.length && inlwidid >= 0) { // Update existing iwid
+            cm.state.iwids[inlwidid].inuse = true;
+            updateMath(cm, inlwidid, ch, line, center, t);
         } else { // Create new iwid
-            
-            const container = document.createElement("div");
-            container.style.position = "absolute";
-            container.style.zIndex = "10";
-            
-            const myEntry = {
+            toCreate.push({
                 ch: ch,
                 line: line,
-                str: t,
-                center: center,
-                inuse: true,
-                width: mathSplit(t)[0],
-                height: mathSplit(t)[1],
-                obj: { m: undefined, c: container }
-            };
-
-            cm.state.iwids.push(myEntry);
-            if((cm.state.iwids.length-1) !== inlwidid) {
-                console.error("Error 4");
-            }
-            
-            myEntry.obj.m = _math(container, t, function(latex: string, width: number, height: number) {
-                const line = myEntry.line;
-                myEntry.width = width;
-                myEntry.height = height;
-                const token = cm.getTokenAt({ ch: myEntry.ch, line: line });
-                const x = mathSplit(latex);
-                x[0] = width;
-                x[1] = height;
-                const target = mathFormat(x);
-                const rc = cm.getDoc().getRange( { line: line, ch: token.start},  { line: line, ch: token.end});
-                //console.log(target + "    " + rc)
-                if(target !== rc) {
-                    cm.getDoc().replaceRange(target, { line: line, ch: token.start},  { line: line, ch: token.end} );
-                }
-                // TODO: Aufpassen! Niemals $ einfügen! Bzw. im mode escapen!
-                // TODO: Verhindere das escapen von % durch mathquill!
+                t: t,
+                center: center
             });
-            
-            console.log("create new");
-
-            cm.addWidget({ ch: ch, line: line }, container, true);                   
-            
         }
 
     });
 
-    /////////////////////////////// Garbage collector
-    cm.state.iwids.forEach(fw => {
+    /////////////////////////////// Garbage collector / Recycling manager
+    cm.state.iwids.forEach((fw, index) => {
         if(!fw.inuse) {
-            if(util.defined(fw.obj.m)) {
-                fw.obj.m.revert();
+            const newMath = toCreate.pop();
+            if(newMath) {
+                cm.state.iwids[index].inuse = true;
+                updateMath(cm, index, newMath.ch, newMath.line, newMath.center, newMath.t);
+            } else {
+                if(util.defined(fw.obj.m)) {
+                    fw.obj.m.revert();
+                }
+                if(util.defined(fw.obj.c.parentNode)) {
+                    fw.obj.c.parentNode.removeChild(fw.obj.c);
+                } else console.error("Strange!");
             }
-            if(util.defined(fw.obj.c.parentNode)) {
-                fw.obj.c.parentNode.removeChild(fw.obj.c);
-            } else console.error("Strange!");
         }
     });
+
+    // Garbage Collect
     cm.state.iwids = util.filter(cm.state.iwids, fw => fw.inuse);
+
+    // Add new ones
+    cm.operation(function () {
+        toCreate.forEach(newMath => {
+            cm.state.iwids.push(createMath(cm, newMath.ch, newMath.line, newMath.center, newMath.t));
+        });
+    });
+
+    cm.state.formula_changing = false;
 };
 
 
 const updateW = function(cm: CMEditEx) {
     const w = cm.getWrapperElement().getBoundingClientRect();
     const g = cm.getGutterElement().getBoundingClientRect();
-    const stop = cm.getScrollerElement().scrollTop;
+    const doc = document.documentElement;
+    const wscroll = (window.pageYOffset || doc.scrollTop)  - (doc.clientTop || 0); // https://stackoverflow.com/a/3464890/6144727
+    const stop = cm.getScrollerElement().scrollTop - wscroll;
+
 
     cm.state.iwids.forEach((fw,i) => {
-        //setTimeout(() => {
-            // Update line number
-            /*$(".cm-wid"+i, cm.getWrapperElement()).attr('class').split(/\s+/).forEach(e => {
-                if(util.startsWith(e, "cm-inlwid")) {
-                    const values = e.substr("cm-inlwid".length).split("x");
-                    if(values.length !== 3) console.error(values);
-                    fw.line = parseInt(values[1]);
-                    fw.ch = parseInt(values[2]);
-                } 
-            });*/
-
-            const token = cm.getTokenAt({ ch: fw.ch, line: fw.line }, false);
-            //console.log(token);
-            const typeinvalid = type => (type === null || !util.hasElement("math", type.split(/\s+/)));
-            if(typeinvalid(token.type) || token.string !== fw.str) {
-                    
-                //if(token.string !== fw.str && !typeinvalid(token.type)) console.log(token.string  + " " + fw.str);
-
-                // This might be caused by insertion or deletion of lines
-               /* if(util.defined(cm.state.oldLength)) {
-                    const newLine = fw.line + (cm.getDoc().lineCount() - cm.state.oldLength);
-                    //console.log(newLine);
-                    const newToken = cm.getTokenAt({ ch: fw.ch, line: newLine }, false);
-                    
-                    const fwl = fw.line;
-                    $(".cm-wid"+i, cm.getWrapperElement()).attr('class').split(/\s+/).forEach(e => {
-                        if(util.startsWith(e, "cm-inlwid")) {
-                            const values = e.substr("cm-inlwid".length).split("x");
-                            if(values.length !== 3) console.error(values);
-                            fw.line = parseInt(values[1]);
-                            fw.ch = parseInt(values[2]);
-                        } 
-                    });
-                    console.log($(".cm-wid"+i, cm.getWrapperElement()).attr('class'));
-                    console.log(fwl + " " + fw.line + " " + newLine +  " " + newToken.type)
-                    //console.log(newToken);
-                } */
-                console.error("Error 9");
-            } else {
-                cm.state.oldLength = cm.getDoc().lineCount();
-            }
-
-            const rect = cm.charCoords({ ch: fw.ch, line: fw.line }); // TODO: Bei enter oder backslash ist line nicht immer aktuell...
-            if(fw.center) {
-                fw.obj.c.style.top = (rect.top - w.top + stop) + "px";            
-                fw.obj.c.style.left = ( (w.right - w.left - g.width  - fw.width )/2)  + "px";
-            } else {
-                fw.obj.c.style.top = (rect.top - w.top + stop) + "px";            
-                fw.obj.c.style.left = (rect.left - w.left - g.width) + "px";
-            }
-      // },0);
+        const rect = cm.charCoords({ ch: fw.ch, line: fw.line }); // TODO: Bei enter oder backslash ist line nicht immer aktuell...
+        if(fw.center) {
+            fw.obj.c.style.top = (rect.top - w.top + stop) + "px";            
+            fw.obj.c.style.left = ( (w.right - w.left - g.width  - fw.width )/2)  + "px";
+        } else {
+            fw.obj.c.style.top = (rect.top - w.top + stop) + "px";            
+            fw.obj.c.style.left = (rect.left - w.left - g.width) + "px";
+        }
     });
     
 };
 
-CodeMirror.defineOption("formula", false, function(cm: CMEditEx, val) {
+CodeMirror.defineOption("formula", true, function(cm: CMEditEx, val) {
     if(!util.defined(cm.state.iwids)) cm.state.iwids = [];
     if (val) {
         cm.state.formula = true;
+        cm.state.formula_changing = false;
         $(cm.getWrapperElement()).addClass("math-visual");
         cm.on("changes", changeProc);
         cm.on("update", updateW);

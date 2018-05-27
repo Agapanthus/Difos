@@ -70,12 +70,20 @@
 //////////////////////////////////////////////////////////////////////////////
 /*********************[ 1a) Math      ]**************************************/
 
-&.math-visual .cm-math {
+&.math-visual .cm-math,
+&.math-visual .cm-imath {
   @include hidetext();
+}
+
+&.math-visual .cm-math-center-close {
+  float: right;
+} 
+
+&:not(.math-visual) .cm-imath {
+  padding-right: 0;
 }
 &:not(.math-visual) .cm-math {
   padding-right: 0;
-  //line-height: inherit;
   line-height: 2.5; 
 }
 

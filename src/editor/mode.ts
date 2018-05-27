@@ -80,6 +80,19 @@ export const getListtype = (str: string) => {
 
 const mathSizes: Array<string> = [];
 
+function mathSizer(stream: CodeMirror.StringStream): string {
+    const x = mathSplit(stream.current());
+    if(x[0] >= 0 && x[1] >= 0) {
+        const xstr = x[0]+"x"+x[1];
+        if(mathSizes.indexOf(xstr) < 0) {
+            mathSizes.push(xstr);
+            util.createCSSSelector(".cm-span"+xstr, "padding-right:"+x[0]+"px;line-height:"+x[1]+"px");
+        }
+        return "span"+xstr;
+    }
+    return "";
+}
+
 let rxs: any = {}; // Regexp-Cache
 
 CodeMirror.defineMode("difosMode", (config, modeConfig) => {
@@ -129,7 +142,7 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
                 s.widget = true;
                 s.math = true;
                 s.progress = 1;
-                return "control";               
+                return "control math-open";               
             } else if(stream.match(/`\s*$/i)) {
                 s.widget = true;
                 s.src = true;
@@ -152,8 +165,8 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             if(s.math) {
                 s.progress++;
                 switch(s.progress - 1) {
-                    case 1: stream.match(/[^\$\\]*(?:\\.[^\$\\]*)*/i); return "math";
-                    case 2: stream.match(/\$/i); s.progress = 0; s.widget = false; s.math = false; return "control";
+                    case 1: stream.match(/[^\$\\]*(?:\\.[^\$\\]*)*/i); return "math " + mathSizer(stream);
+                    case 2: stream.match(/\$/i); s.progress = 0; s.widget = false; s.math = false; return "control math-center-close";
                 }
             } else if(s.src) {
                 s.progress++;
@@ -309,10 +322,11 @@ CodeMirror.defineMode("difosMode", (config, modeConfig) => {
             return adds;
         }
 
-        if(pairMatcher(s, "math", stream, "$")) return "control "+adds; // TODO: Escape \$ and allow whitespace!
+        if(pairMatcher(s, "math", stream, "$")) return "control " + (s.math?"math-open ":"") +adds; // TODO: Escape \$ and allow whitespace!
         if(s.math) { 
-            if(s.math) adds += "imath ";
+            const ch = (stream.pos+1);
             if(!stream.match(/[^\$]+/)) console.error("Error 12"); // TODO: Escape \$
+            if(s.math) adds += "imath ch" + ch + " " + mathSizer(stream);
             return adds;
         }
        

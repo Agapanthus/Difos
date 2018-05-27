@@ -20,6 +20,7 @@ export type CMEditEx = CMEdit<{
     iwids: Array<InlineWidget>, 
     navigateFormula: boolean, 
     formula: boolean, 
+    formula_changing: boolean,
     autocomplete: {
         openpairs: string,
         solidpairs: string,
