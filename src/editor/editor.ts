@@ -20,7 +20,6 @@ import { CMEdit, InlineWidget, CMEditEx } from "./iwids";
 
 import "./editor.scss";
 
-
 export class Editor {
     private options: {
         syncOut: Function,
@@ -33,10 +32,10 @@ export class Editor {
     constructor(a: HTMLElement) {
 
         this.options = {
-            syncIn: undefined,
-            syncOut: undefined
+                syncIn: undefined,
+                syncOut: undefined
         };
-        
+      
         
         this.render(a);
 

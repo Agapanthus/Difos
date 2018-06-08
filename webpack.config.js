@@ -63,7 +63,11 @@ module.exports = {
             presets: ["es2015"]
           }
         }
-      }    
+      },
+      {
+          test: /\.(eot|svg|ttf|woff|woff2)$/,
+          loader: 'file-loader?name=public/fonts/[name].[ext]'
+      }   
     ]
   },
   externals: {

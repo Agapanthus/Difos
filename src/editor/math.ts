@@ -1,7 +1,9 @@
 
 import { IMathQuill, MathQuillConfig, BaseMethods, MathFieldMethods } from "../util/mathquill";
-import "../../mathquill-matrix/build/mathquill.min.js";
-import "../../mathquill-matrix/build/mathquill.css";
+
+(window as any).jQuery = jQuery;
+import "mathquill/build/mathquill.js";
+import "mathquill/build/mathquill.css";
 import * as util from "../util/util";
 
 
