@@ -33,7 +33,7 @@ export const sani_cursor = (cm: CMEditEx) => {
             before = true;
         }
 
-        // An math-Element: Move the cursor to the end of the formula (or it was an opening one and before==true)
+        // An (closing or opening) math-Element: Move the cursor to the end of the formula (or it was an opening one and before==true)
         if(util.hasElement("math", classes) || util.hasElement("imath", classes)) {
             let inlwidid = -1;
          
@@ -48,14 +48,22 @@ export const sani_cursor = (cm: CMEditEx) => {
                 }
             }
 
-            // TODO: When creating a fresh math-object, place the cursor inside it! (For now it will jump back to the previous formula on the same line)
-
+            // When creating a fresh math-object, place the cursor inside it! (For now it will jump back to the previous formula on the same line)
+            const thisE = cm.getTokenAt({ch: maxch, line: c.line}, true);
+           /* console.log(thisE);
+            console.log(refpos);
+            console.log(cm.state.iwids[inlwidid])
+            console.log(cm.state.iwids.length)*/
+            if(thisE.end < refpos) {
+                // This match ends before refpos. Drop it.
+                return;
+            } 
 
             if(inlwidid < 0) {
-                //console.error("Error 5");
-                // This ok - there is the situation of the newly created math-element which is not yet in the list.
+                console.error("Error 5");
             } else {
                 if(util.defined(cm.state.iwids) && util.defined(cm.state.iwids[inlwidid].obj.m)) {
+                    
                     cm.state.iwids[inlwidid].obj.m.focus();
                     if(before) cm.state.iwids[inlwidid].obj.m.moveToLeftEnd();
                     else cm.state.iwids[inlwidid].obj.m.moveToRightEnd();

@@ -2,7 +2,7 @@
 import * as CodeMirror from "codemirror";
 import * as util from "../util/util";
 import { CMEdit, InlineWidget, CMEditEx } from "./iwids";
-import { mathFormat, mathSplit, _math } from "../editor/math";
+import { mathFormat, mathSplit, _math, saniLatex } from "../editor/math";
 import { sani_cursor } from "./navigateFormula";
 
 
@@ -32,6 +32,21 @@ function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t:
         myEntry.height = height;
         myEntry.str = latex;
         const token = cm.getTokenAt({ ch: myEntry.ch, line: line }, true);
+
+
+        // TODO: Kind of hack. The problem: myEntry.ch might be wrong at this point.
+        if(token.type === null || !(util.hasElement("imath", token.type.split(" ")) || util.hasElement("math", token.type.split(" "))) ) {
+            console.error("Error T")
+           // console.log(token);
+            return;
+        }
+        if(token.start+1 != myEntry.ch ) {
+            console.error("Error P");
+           // console.log(token);
+          //  console.log(myEntry);
+            return;
+        }
+
         const x = mathSplit(latex);
         x[0] = width;
         x[1] = height;
@@ -39,16 +54,24 @@ function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t:
         const rc = cm.getDoc().getRange( { line: line, ch: token.start},  { line: line, ch: token.end});
         //console.log("update doc " + line + ":  " + rc + "  ->  " + target)
         if(target !== rc) {
+            //console.log(rc + " -> " + target);
             cm.getDoc().replaceRange(target, { line: line, ch: token.start},  { line: line, ch: token.end});
         }
         // TODO: Aufpassen! Niemals $ einfügen! Bzw. im mode escapen!
         // TODO: Verhindere das escapen von % durch mathquill!
         
+    }, _=> {
+        // Exit to the left
+        cm.focus();
+        cm.getDoc().setCursor({line: myEntry.line, ch: myEntry.ch + myEntry.str.length});
+
+        
     });
     
     console.log("create new");
 
-    cm.addWidget({ ch: ch, line: myEntry.line }, container, true);                   
+    cm.addWidget({ ch: ch, line: myEntry.line }, container, true);          
+
     
     return myEntry;
 }
@@ -65,7 +88,7 @@ function updateMath(cm: CMEditEx, inlwidid: number, ch: number, line: number, ce
         
         if(util.defined(cm.state.iwids[inlwidid].obj.m)) {
             if(mathSplit(t)[2] !== cm.state.iwids[inlwidid].obj.m.latex()) {
-                cm.state.iwids[inlwidid].obj.m.latex(mathSplit(t)[2]);
+                cm.state.iwids[inlwidid].obj.m.latex(saniLatex(mathSplit(t)[2]));
             }
         }    
     }
@@ -84,6 +107,7 @@ const changeProc = (cm: CMEditEx, ch) => {
     
 
     const toCreate = [];
+    const toUpdate = [];
 
     if(cm.state.formula) $(".cm-math, .cm-imath", cm.getWrapperElement()).each((i, obj) => {
       
@@ -105,14 +129,41 @@ const changeProc = (cm: CMEditEx, ch) => {
             console.error("Error 12");
             return;
         }
-        if(!friendLineElem.parent().hasClass("CodeMirror-code")) { // e.g., if there are is a gutter
+        
+        /*if(!friendLineElem.parent().hasClass("CodeMirror-code")) { // e.g., if there are is a gutter
             friendLineElem = friendLineElem.parent();
+            console.log("advance");
+            console.log(friendLineElem)
+            console.log(friendElem[0])
+            console.log(friendElem.parent()[0])
+            console.log(friendElem.parent().parent()[0])
+            console.log(friendElem.parent().parent().attr("class"))
+            console.log(friendElem.parent().parent().parent()[0])
+            console.log(friendElem.parent().parent().parent().attr("class"))
         }
         if(!friendLineElem.parent().hasClass("CodeMirror-code")) {
-            console.error("Error 12");
+            console.error("Error 12b");
+            return;
+        }*/
+        
+        let friendCodeElem = friendLineElem.parent();
+        if(!friendCodeElem.hasClass("CodeMirror-code")) { // e.g., if there are is a gutter
+            console.log("ad")
+            console.log(friendLineElem.parents())
+        console.log(friendLineElem.parent().attr("class"));
+        
+            friendCodeElem = friendCodeElem.parent();
+        }
+        if(!friendCodeElem.hasClass("CodeMirror-code")) {
+            console.error("Error 12b");
             return;
         }
-        const line = friendLineElem.parent().children().index(friendLineElem);
+      /*  const friendCodeElem = friendLineElem.closest( ".CodeMirror-code" );
+        if(friendCodeElem.empty()) {
+            console.error("Error 12b");
+            return;
+        }*/
+        const line = friendCodeElem.children().index(friendLineElem);
         
         const t = friendElem.text();
         const nameList = cm.state.iwids.map(a => a.inuse ? "%disabled" : mathSplit(a.str)[2]);
@@ -120,7 +171,14 @@ const changeProc = (cm: CMEditEx, ch) => {
 
         if(inlwidid < cm.state.iwids.length && inlwidid >= 0) { // Update existing iwid
             cm.state.iwids[inlwidid].inuse = true;
-            updateMath(cm, inlwidid, ch, line, center, t);
+         //   updateMath(cm, inlwidid, ch, line, center, t);
+            toUpdate.push({
+                inlwidid: inlwidid,
+                ch:ch,
+                line:line,
+                center: center,
+                t: t
+            })
         } else { // Create new iwid
             toCreate.push({
                 ch: ch,
@@ -131,6 +189,12 @@ const changeProc = (cm: CMEditEx, ch) => {
         }
 
     });
+
+
+    ///// Update
+    for(let u of toUpdate) {
+        updateMath(cm, u.inlwidid, u.ch, u.line, u.center, u.t);
+    }
 
     /////////////////////////////// Garbage collector / Recycling manager
     cm.state.iwids.forEach((fw, index) => {

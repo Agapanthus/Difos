@@ -403,6 +403,7 @@ llline is (if it exists) the line before lline of this level
 function recalculateList(cm: CMEditEx, doc: CodeMirror.Doc, listtype: string, llline: number, lline: number, line: number, gindent: number, tabSize: number, count: number) {
     const replacements = [];
     while(true) {
+        if(!util.defined(doc.getLine(line))) break;
         if(doc.getLine(line).match(/^s*$/)) { // blank
             line++;
             continue;
@@ -440,6 +441,7 @@ function continueList(cm: CMEditEx, doc: CodeMirror.Doc, ranges: Array<TRange>) 
     const linesep = (cm as any).lineSeparator() || "\n";
     let replacements = [];
     const tabSize = cm.getOption("tabSize");
+
     for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];        
 
@@ -449,6 +451,7 @@ function continueList(cm: CMEditEx, doc: CodeMirror.Doc, ranges: Array<TRange>) 
         const gindent = getIndent(doc.getLine(range.head.line), tabSize);
         while(rline > 0) {
             const tline = doc.getLine(rline);
+            if(!util.defined(tline)) break;
             if(tline.match(/^s*$/)) { // blank
                 rline--;
                 continue;
