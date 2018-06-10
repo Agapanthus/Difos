@@ -22,6 +22,7 @@ const buildGUI: () => void = () => {
       + _body(`<span>Copyright 2018 Eric Skaliks. <a href="http://skaliks.blue/impressum/Datenschutz">Impressum</a>. Fork me on <a href="https://github.com/Agapanthus/Difos">Github</a>. <br>Icons by <a href="https://icons8.com/">Icons 8</a></span>`));
 
   $("#mainloader").css("opacity","0");
+  setTimeout(()=> $("#mainloader").remove() );
 
   startEditor(document.getElementById("mq1"));
   

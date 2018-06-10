@@ -71,6 +71,7 @@ namespace css {
         paddingBottom: "0",
         marginBottom: "4px",
         background: "#fcfcfc",
+        fontFamily: styles.f.code,
         color: "#000",
         $nest: {
             "&::placeholder": { /* Chrome, Firefox, Opera, Safari 10.1+ */
@@ -196,9 +197,9 @@ function createElement(ele: JQuery, id: number) {
         <div class="${css.typebtn}">Korollar</div>
         <div class="${css.typebtn}">Beispiel</div>
         <div class="${css.typebtn}">Kommentar</div>
-        <input class="${css.inputF}" id="subj" placeholder="Fach"> </input>
-        <input class="${css.inputF}" id="src" placeholder="Quelle"> </input>
-        <input class="${css.inputF}" id="ref" placeholder="Referenzen"> </input>
+        <input style="width:60px" class="${css.inputF}" id="subj" placeholder="Fach"> </input>
+        <input style="width:200px" class="${css.inputF}" id="src" placeholder="Quelle"> </input>
+        <input style="width:100px" class="${css.inputF}" id="ref" placeholder="Referenzen"> </input>
         <div class="con ${css.typebtn} ${css.btndel}">Löschen</div>
     </div>
     </div>

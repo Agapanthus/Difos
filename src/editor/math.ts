@@ -45,7 +45,9 @@ export function mathSplit(latex: string): [number, number, string] {
     return [-1,-1,latex];
 }
 
-export const _math = (htmlElement: HTMLElement, content: string, callback: Function, exitLeft: Function) => {
+export const centeredExtraMargin = 16;
+
+export const _math = (htmlElement: HTMLElement, content: string, callback: Function, exitRight: Function, exitLeft: Function) => {
 
     const mq = ((window as any).MathQuill.getInterface(1) as IMathQuill);
 
@@ -61,8 +63,10 @@ export const _math = (htmlElement: HTMLElement, content: string, callback: Funct
            // if(nl !== latex) {
                 latex = nl;
 
-                callback(latex, $(htmlElement).outerWidth(), $(htmlElement).outerHeight());
-                    //htmlElement.getBoundingClientRect().width, htmlElement.getBoundingClientRect().height);
+            if($(htmlElement).outerWidth() === 0) return; // Silently drop early change events!
+
+            callback(latex, $(htmlElement).outerWidth(), $(htmlElement).outerHeight() );
+                //htmlElement.getBoundingClientRect().width, htmlElement.getBoundingClientRect().height);
            // }
            //console.log(mathField.__controller.cursor.parent)
                 
@@ -72,7 +76,8 @@ export const _math = (htmlElement: HTMLElement, content: string, callback: Funct
 
   
     const outOfFun  = function(d, mf) {
-        if(d === 1) exitLeft();
+        if(d === 1) exitRight();
+        else exitLeft();
     }
 
     var mathField = mq.MathField(htmlElement, {

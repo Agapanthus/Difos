@@ -2,12 +2,19 @@
 import * as CodeMirror from "codemirror";
 import * as util from "../util/util";
 import { CMEdit, InlineWidget, CMEditEx } from "./iwids";
-import { mathFormat, mathSplit, _math, saniLatex } from "../editor/math";
+import { mathFormat, mathSplit, _math, saniLatex, centeredExtraMargin } from "../editor/math";
 import { sani_cursor } from "./navigateFormula";
 
 
 // TODO: Deleting in Formulae leads to serious problems with the part of the line after the math object!
 // TODO: Inline-Formlen werden nicht umgebrochen! Vielleicht sogar in der Formel umbrechen...?
+
+let mathProgCounter = 0;
+let creationCounter = 0;
+let progb;
+$( document ).ready(() => {
+    progb= $("body").append("<div id='progbar' style='background: #0f0; position: fixed; top:0; left: 0;width:100%; height:3px;'></div>");
+});
 
 function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t: string) {
     const container = document.createElement("div");
@@ -25,8 +32,18 @@ function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t:
         obj: { m: undefined, c: container }
     };
 
-    
+    creationCounter++; // Created new one
+
+ 
     myEntry.obj.m = _math(container, t, function(latex: string, width: number, height: number) {
+
+        mathProgCounter++; // Loaded a new one
+        $("#progbar").css("left", (mathProgCounter/creationCounter * 50 ) + "%");
+        
+
+        // Extra margin
+        height += (myEntry.center ? (centeredExtraMargin*2) : 0);
+
         const line = myEntry.line;
         myEntry.width = width;
         myEntry.height = height;
@@ -41,7 +58,7 @@ function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t:
             return;
         }
         if(token.start+1 != myEntry.ch ) {
-            console.error("Error P");
+          //  console.error("Error P"); // TODO: ignore this one!
            // console.log(token);
           //  console.log(myEntry);
             return;
@@ -61,14 +78,20 @@ function createMath(cm: CMEditEx, ch: number, iline: number, center: boolean, t:
         // TODO: Verhindere das escapen von % durch mathquill!
         
     }, _=> {
-        // Exit to the left
+        // Exit to the right
         cm.focus();
         cm.getDoc().setCursor({line: myEntry.line, ch: myEntry.ch + myEntry.str.length});
 
         
+    }, _=> {
+        // Exit to the left
+        cm.focus();
+        cm.getDoc().setCursor({line: myEntry.line, ch: myEntry.ch - 2});
+
+        
     });
     
-    console.log("create new");
+    //console.log("create new");
 
     cm.addWidget({ ch: ch, line: myEntry.line }, container, true);          
 
@@ -242,7 +265,7 @@ const updateW = function(cm: CMEditEx) {
     cm.state.iwids.forEach((fw,i) => {
         const rect = cm.charCoords({ ch: fw.ch, line: fw.line }); // TODO: Bei enter oder backslash ist line nicht immer aktuell...
         if(fw.center) {
-            fw.obj.c.style.top = (rect.top - w.top + stop) + "px";            
+            fw.obj.c.style.top = (rect.top - w.top + stop + centeredExtraMargin) + "px";            
             fw.obj.c.style.left = ( (w.right - w.left - g.width  - fw.width )/2)  + "px";
         } else {
             fw.obj.c.style.top = (rect.top - w.top + stop) + "px";            
