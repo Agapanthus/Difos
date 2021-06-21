@@ -11,13 +11,28 @@ import * as $ from "jquery";
 import {style, keyframes, types, media } from 'typestyle';
 
 import * as util from "../util/util";
+import { getImages } from "../editor/donkey";
 
 ////////////////////////////////////////////////////////////////////////////////
 /******************************************************************************/
 
 namespace css {
 
-    
+    export const donkey = style({
+        display: "block",
+        position: "absolute",
+        width: "900px",
+        overflow: "hidden",
+        marginTop: "0",
+        opacity: 0.1,
+        $nest: {
+            "& img": {
+                width: "100%"
+            }
+        }
+    });
+
+
     export const body = style({
         fontFamily: styles.fonts[0],
         fontSize: "17px",
@@ -100,18 +115,24 @@ namespace css {
         $nest: {
             "& .con": {
                 display: "none",
+                overflow: "hidden",
+                position: "relative"
             },
+            "& .nav .con": {
+                position: "absolute"
+            },             
             "&.show .con": {
                 display: "block"
             },
             "& .body": {
+                borderRadius: "3px",
+                padding: "0 20px 10px 20px",
             },
             "&.definition .body": {
                 border: "1px solid transparent",
-                background: "#f5f5f5",
+                //background: "#f5f5f5",
+                background: "rgba(0,0,0,0.04)",
                 borderColor: "#ddd",
-                borderRadius: "3px",
-                padding: "0 20px 10px 20px"
             },
             "& .CodeMirror": {
                 background: "transparent"
@@ -147,7 +168,7 @@ function onchangeTitle(id: number, change: string) {
             return;
         }
     }
-    store.push({id: id, title: change, body:"",  ref:"", src:"", subj:"", type:""});
+    store.push({id: id, title: change, body:"",  ref:"", src:"", subj:"", img:"", type:""});
 }*/
 function onchangeBody(id: number, change: string) {
     asyncChanges(store, id);
@@ -157,7 +178,7 @@ function onchangeBody(id: number, change: string) {
             return;
         }
     }
-    store.push({id: id, title: "", body:change, ref:"", src:"", subj:"",  type:""});
+    store.push({id: id, title: "", body:change, ref:"", src:"", subj:"",  img:"", type:""});
 }
 function onchangeType(id: number, change: string) {
     asyncChanges(store, id);
@@ -167,7 +188,17 @@ function onchangeType(id: number, change: string) {
             return;
         }
     }
-    store.push({id: id, title: "", body:"", ref:"", src:"", subj:"", type:change});
+    store.push({id: id, title: "", body:"", ref:"", src:"", subj:"", img:"", type:change});
+}
+function onchangeImg(id: number, change: string) {
+    asyncChanges(store, id);
+    for(let e of store) {
+        if(e.id === id) {
+            e.img = change;
+            return;
+        }
+    }
+    store.push({id: id, title: "", body:"", ref:"", src:"", subj:"", type:"", img:change});
 }
 
 function onFieldChange(id: number) {
@@ -187,11 +218,26 @@ function onFieldChange(id: number) {
     
 }
 
+
+function setImageBack(img : string, id) {
+    //console.log(img);
+    const m = (/^<img src=\"(.*)\">$/g).exec(img);
+    //console.log(m);
+    if(m) {
+        img = m[1];
+    }
+    $(`#difos_e_${id} .rcon`).css("background", "linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url("+img+")")
+    $(`#difos_e_${id} .rcon`).css("background-size", "cover");
+    $(`#difos_e_${id} .rcon`).css("background-position", "center");
+
+    $(`#difos_e_${id} .rcon`).attr("donkey", img);
+}
+
 function createElement(ele: JQuery, id: number) {
     ele.append((`<div><div>
     <div id="difos_e_${id}" class="${css.ele}">
     <div class ="${css.sep}">
-    <div class="${body.body} " style="padding:5px">
+    <div class="${body.body} nav" style="padding:5px">
         <div class="${css.typebtn}">Satz</div>
         <div class="${css.typebtn}">Definition</div>
         <div class="${css.typebtn}">Korollar</div>
@@ -200,12 +246,15 @@ function createElement(ele: JQuery, id: number) {
         <input style="width:60px" class="${css.inputF}" id="subj" placeholder="Fach"> </input>
         <input style="width:200px" class="${css.inputF}" id="src" placeholder="Quelle"> </input>
         <input style="width:100px" class="${css.inputF}" id="ref" placeholder="Referenzen"> </input>
+        <div class="${css.typebtn}">R</div>
         <div class="con ${css.typebtn} ${css.btndel}">Löschen</div>
     </div>
     </div>
    
     <div class="${body.body}" style="padding:0">
-    <div class="con" >
+    <div class="con rcon" >
+        <div class="${css.donkey}" id="donkey"></div>
+
         <div class="body"></div>
     </div>
     </div>
@@ -215,6 +264,7 @@ function createElement(ele: JQuery, id: number) {
     $(`#difos_e_${id} .${css.inputF}`).bind("input", e => onFieldChange(id));
 
 
+
     $(`#difos_e_${id} .${css.typebtn}`).on("click", e => {
 
         const t = $(e.toElement).text();
@@ -222,6 +272,27 @@ function createElement(ele: JQuery, id: number) {
             if(confirm("Wirklich löschen?")) {
                 $(`#difos_e_${id}`).parent().parent().remove();
                 ondelete(id);
+            }
+            return;
+        }
+        if(t === "R") {
+            const reg = /\#\s*([a-zA-Z0-9\s]*)\n/g;
+            /*let m = reg.exec(e.body);
+            let s = "unicorn";
+            if(m) s = m[1];*/
+            
+            if( $(`#difos_e_${id} .rcon`).attr("donkey") && $(`#difos_e_${id} .rcon`).attr("donkey").length > 0) {
+                //$(`#difos_e_${id} #donkey`).html().length > 0) {
+                //$(`#difos_e_${id} #donkey`).html("");
+                setImageBack("", id);
+                onchangeImg(id, "");
+            } else {
+                getImages(undefined, res => {
+                    console.log(res);
+                    onchangeImg(id, res);
+                    //$(`#difos_e_${id} #donkey`).html(res);
+                    setImageBack(res, id);
+                });
             }
             return;
         }
@@ -238,6 +309,7 @@ function createElement(ele: JQuery, id: number) {
         }
         
         $(`#difos_e_${id}`).removeClass("definition").removeClass("satz");
+        //$(`#difos_e_${id}`).addClass("definition");
         switch(t) {
             case "Definition":
                 $(`#difos_e_${id}`).addClass("definition");
@@ -266,6 +338,7 @@ function createElement(ele: JQuery, id: number) {
             for(let t of $(`#difos_e_${id} .${css.typebtn}`).toArray() ) {
                 if($(t).text() === e.type) $(t).addClass("selected");
             }
+           // $(`#difos_e_${id}`).addClass("definition");
             switch(e.type) {
                 case "Definition":
                     $(`#difos_e_${id}`).addClass("definition");
@@ -274,8 +347,12 @@ function createElement(ele: JQuery, id: number) {
                     $(`#difos_e_${id}`).addClass("satz");
                     break;
             }
-    
-
+            if(e.img && e.img.length > 0) {
+              //  console.log(e.img);
+                setImageBack(e.img, id);
+            }
+                
+            
             return;
         }
     }

@@ -17,7 +17,7 @@ export namespace body {
         fontSize: "17px",
 
         display: "block",
-        width: "50%",
+        //width: "50%",
         position: "relative",
         border: "none",
         //borderTop: "3px solid " + styles.c8,

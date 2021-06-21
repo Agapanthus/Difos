@@ -81,10 +81,12 @@ export function asyncChanges(changes: object, id: number) {
 export function readDB(callback: ((string)=>void)) {
     $.ajax({
         type: "GET",
-        url: "http://localhost/db.json",
+        url: "http://localhost/db.json", // "./db.json", 
         success: data =>( console.log(data), callback(data) ),
         error: e => console.error(e)
     });
 
+
+//callback( [{"id":8,"title":"","body":"## Differenzierbarkeit\n * $f:D\\to\\mathbb{R}\\%size77x23$\n * $x_0\\%size21x32$ innerer Punkt von $D\\subset\\mathbb{R}\\%size56x23$\nFolgendes ist äquivalent:\n\n\ti) $f\\%size15x23$ diffbar in $x_0\\%size21x32$\n\tii) $\\lim_{h\\to0}\\frac{f\\left(x_0+h\\right)-f\\left(x_0\\right)}{h}\\%size224x53$  existiert\n\tiii) $\\lim_{x\\to x_0}\\frac{f\\left(x\\right)-f\\left(x_0\\right)}{x-x_0}\\%size193x60$ existiert\n\tiv) $\\exists a\\in\\mathbb{R}\\quad\\forall\\epsilon>0\\quad\\exists\\delta>0\\quad\\forall0<\\left|h\\right|<\\delta\\%size280x27$\n$\\left|\\frac{f\\left(x_0+h\\right)-f\\left(x_0\\right)}{h}-a\\right|<\\epsilon\\%size233x89$\n\tv) $\\varphi:D\\to\\mathbb{R}\\%size76x23$ in $x_0\\%size21x32$ stetig, $\\varphi\\left(x_0\\right)=0\\%size86x36$ und $\\exists b\\in\\mathbb{R}\\forall x\\in D\\%size115x23$ \n$f\\left(x\\right)=f\\left(x_0\\right)+\\left(x-x_0\\right)b+\\left(x-x_0\\right)\\varphi\\left(x\\right)\\%size354x68$\n\tAußerdem ist dann\n$\\lim_{x\\to x_0}\\frac{f\\left(x\\right)-f\\left(x_0\\right)}{x-x_0}=b=f'\\left(x_0\\right)\\%size303x92$\n vi) $f'_+\\left(x_0\\right)=f'_-\\left(x_0\\right)\\%size163x36$ existieren.","ref":"","src":"VI.1.1, VI.1.3, VI.1.6","subj":"AnaII","type":"Definition","found":1}]);
 
 }

@@ -15,7 +15,7 @@ module.exports = {
     c: {
         
         text: "#000", // Normal text-color
-        struct: "#eee", // thin Structure-lines and shapes 
+        struct: "rgba(0,0,0,0.1)", // thin Structure-lines and shapes 
         h1: "#000", // Large Headers
         h2: "#000", // Other Headers
 
